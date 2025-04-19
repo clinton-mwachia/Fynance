@@ -28,6 +28,7 @@ and gain insights into your spending habits.
 Prerequisite:
 - Download [MongoDB](https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.8-signed.msi)
 - Intall MongoDB.
+- Download the App: [Fynance](https://github.com/clinton-mwachia/Fynance/releases/tag/v1.2.1)
   
  Installation Instructions: 
 1. Locate the FynanceSetup.exe file.  
@@ -44,10 +45,15 @@ Prerequisite:
 
 Upgrade for More Features!
 Want more advanced features? You can upgrade Fynance to include:
+
 ✅ Dashboard – Allow multiple users to track expenses.
+
 ✅ Reports & Insights: Generate monthly income vs. expense reports with visual charts. 
+
 ✅ Budgeting: Set and track spending limits for different categories.  
+
 ✅ Data Storage: Save all financial data securely in MongoDB and automatic backups.  
+
 ✅ App logs for tracking daily usage and debugging.
 
 🔹 To upgrade and unlock these features and more, contact us!
