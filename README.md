@@ -1,7 +1,7 @@
  Fynance – Expense Tracker  
 ==================================================  
 
-Version: 1.2.1  
+Version: 1.2.2  
 Developed by: Clinton Moshe  
 Date: 16/04/2025  
 
