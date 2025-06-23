@@ -28,7 +28,7 @@ and gain insights into your spending habits.
 Prerequisite:
 - Download [MongoDB](https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.8-signed.msi)
 - Intall MongoDB.
-- Download the App: [Fynance](https://github.com/clinton-mwachia/Fynance/releases/tag/v1.2.1)
+- Download the App: [Fynance](https://github.com/clinton-mwachia/Fynance/releases/tag/v1.2.3)
   
  Installation Instructions: 
 1. Locate the FynanceSetup.exe file.  
