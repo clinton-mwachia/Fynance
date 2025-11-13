@@ -11,7 +11,7 @@ import (
 )
 
 func Sidebar(window fyne.Window, showParameters, showIncome,
-	showExpenses, showReport, showContact,
+	showExpenses, showReport, showContact, showDashboard,
 	showLogin func(), userID primitive.ObjectID) *fyne.Container {
 
 	// Define buttons with their labels and actions
@@ -19,6 +19,7 @@ func Sidebar(window fyne.Window, showParameters, showIncome,
 		label    string
 		callback func()
 	}{
+		{"Dashboard", showDashboard},
 		{"Parameters", showParameters},
 		{"Income", showIncome},
 		{"Expenses", showExpenses},
