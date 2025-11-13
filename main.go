@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fynance/appTheme"
 	"fynance/helpers"
 	"fynance/utils"
 	"fynance/views"
-	"image/color"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -12,16 +12,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 )
-
-type themeVariant struct {
-	fyne.Theme
-
-	variant fyne.ThemeVariant
-}
-
-func (f *themeVariant) Color(name fyne.ThemeColorName, _ fyne.ThemeVariant) color.Color {
-	return f.Theme.Color(name, f.variant)
-}
 
 func main() {
 	application := app.New()
@@ -39,9 +29,9 @@ func main() {
 	}
 
 	if settings.IsDarkMode {
-		fyne.CurrentApp().Settings().SetTheme(&themeVariant{Theme: theme.DefaultTheme(), variant: theme.VariantDark})
+		fyne.CurrentApp().Settings().SetTheme(&appTheme.ThemeVariant{Theme: theme.DefaultTheme(), Variant: theme.VariantDark})
 	} else {
-		fyne.CurrentApp().Settings().SetTheme(&themeVariant{Theme: theme.DefaultTheme(), variant: theme.VariantLight})
+		fyne.CurrentApp().Settings().SetTheme(&appTheme.ThemeVariant{Theme: theme.DefaultTheme(), Variant: theme.VariantLight})
 	}
 
 	// Function to show the details view
