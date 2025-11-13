@@ -16,15 +16,21 @@ func Dashboard(window fyne.Window) *fyne.Container {
 	header := Header(window)
 	footer := Footer(window)
 
-	// fetch to tal incomes
+	// fetch to totals
 	totalIncome := utils.TotalIncome(window)
+	totalExpenses := utils.TotalExpenses(window)
+	balance := totalIncome - totalExpenses
 
 	// Creat statistics boxes
-	incomeBox := createStatisticsBox("Total Income", strconv.FormatFloat(totalIncome, 'f', 2, 64))
+	totalIncomeBox := createStatisticsBox("Total Income", strconv.FormatFloat(totalIncome, 'f', 2, 64))
+	totalExpenseBox := createStatisticsBox("Total Expenses", strconv.FormatFloat(totalExpenses, 'f', 2, 64))
+	balanceBox := createStatisticsBox("Balance", strconv.FormatFloat(balance, 'f', 2, 64))
 
 	// Layout for the statistics boxes
-	statsContainer := container.New(layout.NewGridLayout(1),
-		incomeBox,
+	statsContainer := container.New(layout.NewGridLayout(3),
+		totalIncomeBox,
+		totalExpenseBox,
+		balanceBox,
 	)
 
 	return container.NewBorder(header, footer, nil, nil, statsContainer)
