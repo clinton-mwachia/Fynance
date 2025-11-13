@@ -203,3 +203,39 @@ func SumExpenseByMonth(month string) (MonthlyExpense, error) {
 
 	return result, nil
 }
+
+// Returns the total expenses amount for that year
+func TotalExpenses(w fyne.Window) float64 {
+	collection := GetCollection("expenses")
+
+	// get current year
+	currentYear := time.Now().Format("2006")
+
+	// Filter by the "year" field
+	filter := bson.M{
+		"year": currentYear,
+	}
+
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		dialog.ShowError(err, w)
+		return 0
+	}
+	defer cursor.Close(context.TODO())
+
+	var total float64
+	for cursor.Next(context.TODO()) {
+		var expense models.Expense
+		if err := cursor.Decode(&expense); err != nil {
+			dialog.ShowError(err, w)
+			continue
+		}
+		total += expense.Amount
+	}
+
+	if err := cursor.Err(); err != nil {
+		dialog.ShowError(err, w)
+	}
+
+	return total
+}
