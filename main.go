@@ -20,7 +20,7 @@ func main() {
 	utils.ConnectDB("mongodb://localhost:27017", window)
 
 	// Placeholder for functions that need to reference each other
-	var showParameters, showIncome, showExpenses, showReport, showContact, showLogin func()
+	var showParameters, showIncome, showExpenses, showReport, showContact, showDashboard, showLogin func()
 
 	// Load the settings on app startup
 	settings, err := views.LoadSettings()
@@ -37,7 +37,7 @@ func main() {
 	// Function to show the details view
 	showParameters = func() {
 		sidebar := views.Sidebar(window, showParameters, showIncome,
-			showExpenses, showReport, showContact, showLogin, helpers.CurrentUserID)
+			showExpenses, showReport, showContact, showDashboard, showLogin, helpers.CurrentUserID)
 		parameters := views.ParametersView(window, helpers.CurrentUserID)
 		window.SetContent(container.NewBorder(nil, nil, sidebar, nil, parameters))
 	}
@@ -45,7 +45,7 @@ func main() {
 	// Function to show the income view
 	showIncome = func() {
 		sidebar := views.Sidebar(window, showParameters, showIncome,
-			showExpenses, showReport, showContact, showLogin, helpers.CurrentUserID)
+			showExpenses, showReport, showContact, showDashboard, showLogin, helpers.CurrentUserID)
 		income := views.IncomeView(window, helpers.CurrentUserID)
 		window.SetContent(container.NewBorder(nil, nil, sidebar, nil, income))
 	}
@@ -53,7 +53,7 @@ func main() {
 	// Function to show the expenses view
 	showExpenses = func() {
 		sidebar := views.Sidebar(window, showParameters, showIncome,
-			showExpenses, showReport, showContact, showLogin, helpers.CurrentUserID)
+			showExpenses, showReport, showContact, showDashboard, showLogin, helpers.CurrentUserID)
 		expenses := views.ExpenseView(window, helpers.CurrentUserID)
 		window.SetContent(container.NewBorder(nil, nil, sidebar, nil, expenses))
 	}
@@ -61,7 +61,7 @@ func main() {
 	// Function to show the report view
 	showReport = func() {
 		sidebar := views.Sidebar(window, showParameters, showIncome,
-			showExpenses, showReport, showContact, showLogin, helpers.CurrentUserID)
+			showExpenses, showReport, showContact, showDashboard, showLogin, helpers.CurrentUserID)
 		report := views.Report(window)
 		window.SetContent(container.NewBorder(nil, nil, sidebar, nil, report))
 	}
@@ -69,14 +69,22 @@ func main() {
 	// Function to show the contact view
 	showContact = func() {
 		sidebar := views.Sidebar(window, showParameters, showIncome,
-			showExpenses, showReport, showContact, showLogin, helpers.CurrentUserID)
+			showExpenses, showReport, showContact, showDashboard, showLogin, helpers.CurrentUserID)
 		contact := views.ContactView(window)
 		window.SetContent(container.NewBorder(nil, nil, sidebar, nil, contact))
 	}
 
+	// Function to show the dashboard view
+	showDashboard = func() {
+		sidebar := views.Sidebar(window, showParameters, showIncome,
+			showExpenses, showReport, showContact, showDashboard, showLogin, helpers.CurrentUserID)
+		dashboard := views.Dashboard(window)
+		window.SetContent(container.NewBorder(nil, nil, sidebar, nil, dashboard))
+	}
+
 	// Function to show the login view
 	showLogin = func() {
-		window.SetContent(views.LoginView(window, showParameters))
+		window.SetContent(views.LoginView(window, showDashboard))
 	}
 
 	// Initial view when the application starts
