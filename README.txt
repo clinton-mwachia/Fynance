@@ -1,9 +1,9 @@
  Fynance – Expense Tracker  
 ==================================================  
 
-Version: 1.2.3  
+Version: 1.4.0  
 Developed by: Clinton Moshe  
-Date: 16/06/2025  
+Date: 18/11/2025  
 
  Introduction:  
 Welcome to Fynance, a simple and efficient expense tracking desktop application 
@@ -21,12 +21,12 @@ and gain insights into your spending habits.
  System Requirements:  
 - Operating System: Windows 7 or higher (32-bit or 64-bit)  
 - Processor: 1 GHz or higher  
-- RAM: 2 GB or more  
+- RAM: 1 GB or more  
 - Disk Space: 50 MB or more available space  
 - Database: MongoDB  
 
  Installation Instructions:  
-1. Locate the FynanceSetup.exe file.  
+1. Locate the [Fynance](https://moshecrafts.com/apps/fynance.exe).  
 2. Run the installer and follow the on-screen instructions.  
 3. Choose the location where you want the application to be installed.  
 4. Once installed, launch Fynance from the Start Menu or desktop shortcut.  
