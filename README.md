@@ -27,7 +27,7 @@ System Requirements:
 
 Installation Instructions:
 
-1. Locate the FynanceSetup.exe file.
+1. Download [Fynance](https://moshecrafts.com/apps/fynance.exe).
 2. Run the installer and follow the on-screen instructions.
 3. Choose the location where you want the application to be installed.
 4. Once installed, launch Fynance from the Start Menu or desktop shortcut.
