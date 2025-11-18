@@ -239,3 +239,47 @@ func TotalIncome(w fyne.Window) float64 {
 
 	return total
 }
+
+// total income by category limited to 5
+func GetIncomeStats(ctx context.Context) (map[string]float64, error) {
+	collection := GetCollection("income")
+
+	pipeline := []bson.M{
+		{
+			"$group": bson.M{
+				"_id":   "$category",
+				"count": bson.M{"$sum": "$amount"},
+			},
+		},
+		{
+			"$sort": bson.M{
+				"count": -1, // sort by count descending
+			},
+		},
+		{
+			"$limit": 7, // return only top 5 categories
+		},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		Category string  `bson:"_id"`
+		Count    float64 `bson:"count"`
+	}
+
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	stats := make(map[string]float64)
+	for _, result := range results {
+		stats[result.Category] = result.Count
+	}
+
+	return stats, nil
+}
