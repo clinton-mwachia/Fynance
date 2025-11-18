@@ -1,20 +1,91 @@
 package views
 
 import (
+	"context"
+	"fynance/charts"
 	"fynance/utils"
 	"image/color"
+	"log"
 	"strconv"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
+type ChartApp struct {
+	window        fyne.Window
+	incomeChart   *charts.BarChart
+	expensesChart *charts.BarChart
+}
+
+func NewChartApp(window fyne.Window) *ChartApp {
+	return &ChartApp{
+		window:        window,
+		incomeChart:   charts.NewBarChart(200, 70, 10),
+		expensesChart: charts.NewBarChart(200, 70, 10),
+	}
+}
+
+func (app *ChartApp) updateCharts() {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Update income stats
+	incomeStats, err := utils.GetIncomeStats(ctx)
+	if err != nil {
+		dialog.ShowInformation("ERROR getting income stats", err.Error(), app.window)
+		return
+	}
+
+	incomeData := make(map[string]charts.DataPoint)
+
+	i := 0
+	// Generate distinct colors dynamically
+	incomeColors := utils.GenerateDistinctColors(len(incomeStats))
+
+	for income, count := range incomeStats {
+		incomeData[income] = charts.DataPoint{
+			Count: count,
+			Color: incomeColors[i],
+		}
+		i++
+	}
+	app.incomeChart.UpdateData(incomeData)
+
+	// Update completion stats
+	expense_stats, err := utils.GetExpenseStats(ctx)
+	if err != nil {
+		log.Printf("Error getting expenses stats: %v", err)
+		return
+	}
+
+	expensesData := make(map[string]charts.DataPoint)
+	// Generate distinct colors dynamically
+	expenseColors := utils.GenerateDistinctColors(len(expense_stats))
+
+	i2 := 0
+	for expense, count := range expense_stats {
+		expensesData[expense] = charts.DataPoint{
+			Count: count,
+			Color: expenseColors[i2],
+		}
+		i2++
+	}
+	app.expensesChart.UpdateData(expensesData)
+}
+
 func Dashboard(window fyne.Window) *fyne.Container {
 	header := Header(window)
 	footer := Footer(window)
+
+	// Initialize charts
+	chartApp := NewChartApp(window)
 
 	// fetch to totals
 	totalIncome := utils.TotalIncome(window)
@@ -26,6 +97,12 @@ func Dashboard(window fyne.Window) *fyne.Container {
 	totalExpenseBox := createStatisticsBox("Total Expenses", strconv.FormatFloat(totalExpenses, 'f', 2, 64))
 	balanceBox := createStatisticsBox("Balance", strconv.FormatFloat(balance, 'f', 2, 64))
 
+	// Charts layout
+	chartsContainer := container.NewGridWithColumns(2,
+		widget.NewCard("Top Income Expenditure", "", chartApp.incomeChart.Container()),
+		widget.NewCard("Top Expenses", "", chartApp.expensesChart.Container()),
+	)
+
 	// Layout for the statistics boxes
 	statsContainer := container.New(layout.NewGridLayout(3),
 		totalIncomeBox,
@@ -33,7 +110,10 @@ func Dashboard(window fyne.Window) *fyne.Container {
 		balanceBox,
 	)
 
-	return container.NewBorder(header, footer, nil, nil, statsContainer)
+	// Initial chart update
+	chartApp.updateCharts()
+
+	return container.NewBorder(header, footer, nil, nil, container.NewVBox(statsContainer, chartsContainer))
 }
 
 // createStatisticsBox creates a statistics display box
