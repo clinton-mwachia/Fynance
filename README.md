@@ -21,7 +21,7 @@ System Requirements:
 
 - Operating System: Windows 7 or higher (32-bit or 64-bit)
 - Processor: 1 GHz or higher
-- RAM: 2 GB or more
+- RAM: 1 GB or more
 - Disk Space: 50 MB or more available space
 - Database: MongoDB
 
