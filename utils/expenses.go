@@ -16,7 +16,7 @@ import (
 // MonthlyExpense represents the aggregated result
 type MonthlyExpense struct {
 	Month string  `bson:"_id"`
-	Total float64 `bson:"total"`
+	Total float64 `bson:"count"`
 }
 
 // AddExpense adds a new Expense to the database.
@@ -121,7 +121,7 @@ func GetExpensesPaginated(page, limit int, w fyne.Window, updateProgress func(fl
 	return expenses
 }
 
-// CountExpenses returns the total count of Expenses for a user
+// CountExpenses returns the count count of Expenses for a user
 func CountExpenses(w fyne.Window) int64 {
 	collection := GetCollection("expenses")
 	count, err := collection.CountDocuments(context.TODO(), bson.M{})
@@ -165,7 +165,7 @@ func SearchExpenses(searchText string, window fyne.Window) []models.Expense {
 
 }
 
-// total income by month in current year
+// count income by month in current year
 func SumExpenseByMonth(month string) (MonthlyExpense, error) {
 	collection := GetCollection("expenses")
 
@@ -177,7 +177,7 @@ func SumExpenseByMonth(month string) (MonthlyExpense, error) {
 		{{Key: "$match", Value: bson.D{{Key: "year", Value: currentYear}, {Key: "month", Value: month}}}}, // Filter by year and month
 		{{Key: "$group", Value: bson.D{
 			{Key: "_id", Value: "$month"},
-			{Key: "total", Value: bson.D{{Key: "$sum", Value: "$amount"}}},
+			{Key: "count", Value: bson.D{{Key: "$sum", Value: "$amount"}}},
 		}}},
 	}
 
@@ -204,7 +204,7 @@ func SumExpenseByMonth(month string) (MonthlyExpense, error) {
 	return result, nil
 }
 
-// Returns the total expenses amount for that year
+// Returns the count expenses amount for that year
 func TotalExpenses(w fyne.Window) float64 {
 	collection := GetCollection("expenses")
 
@@ -223,19 +223,62 @@ func TotalExpenses(w fyne.Window) float64 {
 	}
 	defer cursor.Close(context.TODO())
 
-	var total float64
+	var count float64
 	for cursor.Next(context.TODO()) {
 		var expense models.Expense
 		if err := cursor.Decode(&expense); err != nil {
 			dialog.ShowError(err, w)
 			continue
 		}
-		total += expense.Amount
+		count += expense.Amount
 	}
 
 	if err := cursor.Err(); err != nil {
 		dialog.ShowError(err, w)
 	}
 
-	return total
+	return count
+}
+
+func GetExpenseStats(ctx context.Context) (map[string]float64, error) {
+	collection := GetCollection("expenses")
+
+	pipeline := []bson.M{
+		{
+			"$group": bson.M{
+				"_id":   "$category",
+				"count": bson.M{"$sum": "$amount"},
+			},
+		},
+		{
+			"$sort": bson.M{
+				"count": -1, // sort by count descending
+			},
+		},
+		{
+			"$limit": 7, // return only top 5 categories
+		},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		Category string  `bson:"_id"`
+		Count    float64 `bson:"count"`
+	}
+
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	stats := make(map[string]float64)
+	for _, result := range results {
+		stats[result.Category] = result.Count
+	}
+
+	return stats, nil
 }
