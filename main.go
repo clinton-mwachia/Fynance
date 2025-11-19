@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	application := app.New()
+	application := app.NewWithID("fynance.com")
 	window := application.NewWindow("Fynance")
 	// connect to DB
 	utils.ConnectDB("mongodb://localhost:27017", window)
