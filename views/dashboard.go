@@ -3,10 +3,10 @@ package views
 import (
 	"context"
 	"fynance/charts"
+	"fynance/helpers"
 	"fynance/utils"
 	"image/color"
 	"log"
-	"strconv"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -93,9 +93,9 @@ func Dashboard(window fyne.Window) *fyne.Container {
 	balance := totalIncome - totalExpenses
 
 	// Creat statistics boxes
-	totalIncomeBox := createStatisticsBox("Total Income", strconv.FormatFloat(totalIncome, 'f', 2, 64))
-	totalExpenseBox := createStatisticsBox("Total Expenses", strconv.FormatFloat(totalExpenses, 'f', 2, 64))
-	balanceBox := createStatisticsBox("Balance", strconv.FormatFloat(balance, 'f', 2, 64))
+	totalIncomeBox := createStatisticsBox("Total Income", helpers.FormatAmount(totalIncome))
+	totalExpenseBox := createStatisticsBox("Total Expenses", helpers.FormatAmount(totalExpenses))
+	balanceBox := createStatisticsBox("Balance", helpers.FormatAmount(balance))
 
 	// Charts layout
 	chartsContainer := container.NewGridWithColumns(2,
