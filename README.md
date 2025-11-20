@@ -1,5 +1,7 @@
 # Fynance – Expense Tracker
 
+![Screenshot](assets/dashboard.png "Dashboard")
+
 Version: 1.4.0  
 Developed by: Clinton Moshe  
 Date: 18/11/2025
@@ -40,17 +42,7 @@ How to Use:
 4. View Reports: Check the Reports section for a detailed breakdown of income vs. expenses.
 5. Export Data: Save financial reports as CSV for record-keeping.
 
-Upgrade for More Features!
-Want more advanced features? You can upgrade Fynance to include:
-✅ Dashboard – Allow multiple users to track expenses.
-✅ Reports & Insights: Generate monthly income vs. expense reports with visual charts.
-✅ Budgeting: Set and track spending limits for different categories.  
-✅ Data Storage: Save all financial data securely in MongoDB and automatic backups.  
-✅ App logs for tracking daily usage and debugging.
-
-🔹 To upgrade and unlock these features and more, contact us!
-
-Contact:  
+Contact For custom softwares:  
 For any assistance or inquiries, contact:  
 📧 Email: clintonmwachia9@gmail.com  
 📞 Phone: +254746646331 / +254738816913
