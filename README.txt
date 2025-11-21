@@ -1,9 +1,9 @@
  Fynance – Expense Tracker  
 ==================================================  
 
-Version: 1.4.1  
+Version: 1.5.0 
 Developed by: Clinton Moshe  
-Date: 19/11/2025  
+Date: 21/11/2025  
 
  Introduction:  
 Welcome to Fynance, a simple and efficient expense tracking desktop application 
