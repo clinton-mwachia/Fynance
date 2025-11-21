@@ -7,6 +7,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -82,6 +83,7 @@ func GetIncomesPaginated(page, limit int, w fyne.Window, updateProgress func(flo
 
 	skip := (page - 1) * limit
 	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
 	findOptions.SetSkip(int64(skip))
 	findOptions.SetLimit(int64(limit))
 
@@ -97,7 +99,7 @@ func GetIncomesPaginated(page, limit int, w fyne.Window, updateProgress func(flo
 	if err = cursor.All(context.TODO(), &incomes); err != nil {
 		dialog.ShowError(err, w)
 	}
-	// Process todos and update progress
+	// Process incomes and update progress
 	count := 0
 	for cursor.Next(context.TODO()) {
 		var income models.Income
@@ -257,7 +259,7 @@ func GetIncomeStats(ctx context.Context) (map[string]float64, error) {
 			},
 		},
 		{
-			"$limit": 7, // return only top 5 categories
+			"$limit": 5, // return only top 5 categories
 		},
 	}
 
@@ -282,4 +284,39 @@ func GetIncomeStats(ctx context.Context) (map[string]float64, error) {
 	}
 
 	return stats, nil
+}
+
+// BulkInsertIncome inserts multiple incomes into the database safely.
+func BulkInsertIncome(incomes []models.Income, window fyne.Window, progressBar *widget.ProgressBar) {
+	collection := GetCollection("income")
+	var docs []any
+	totalIncomes := len(incomes)
+	progress := 0
+
+	for i, income := range incomes {
+		parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
+		if err != nil {
+			dialog.ShowError(err, window)
+			return
+		}
+		income.CreatedAt = parsedTime
+		income.UpdatedAt = parsedTime
+		docs = append(docs, income)
+
+		// Update progress bar for each income processed
+		progress = i + 1
+		progressBar.SetValue(float64(progress) / float64(totalIncomes))
+
+		// Flush the documents in smaller batches
+		if len(docs) == 100 || i == totalIncomes-1 {
+			_, err := collection.InsertMany(context.TODO(), docs)
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+			docs = nil // Reset docs slice for next batch
+		}
+	}
+
+	dialog.ShowInformation("Success", "Incomes added successfully!", window)
 }

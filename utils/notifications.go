@@ -13,6 +13,7 @@ import (
 	"github.com/faiface/beep/wav"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // AddNotification adds a new notification to the database
@@ -58,7 +59,9 @@ func FetchNotifications(userID primitive.ObjectID, window fyne.Window) []models.
 	collection := GetCollection("notifications")
 	filter := bson.M{"user_id": userID}
 
-	cur, err := collection.Find(context.TODO(), filter)
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
+	cur, err := collection.Find(context.TODO(), filter, findOptions)
 	if err != nil {
 		dialog.ShowError(err, window)
 		return nil

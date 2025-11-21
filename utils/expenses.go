@@ -256,7 +256,7 @@ func GetExpenseStats(ctx context.Context) (map[string]float64, error) {
 			},
 		},
 		{
-			"$limit": 7, // return only top 5 categories
+			"$limit": 5, // return only top 5 categories
 		},
 	}
 

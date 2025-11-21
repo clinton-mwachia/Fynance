@@ -34,3 +34,5 @@ go.work.sum
 main.iss
 
 app.log
+
+tests/

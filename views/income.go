@@ -2,6 +2,7 @@ package views
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"fynance/helpers"
 	"fynance/models"
@@ -9,12 +10,14 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -244,6 +247,57 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 		showIncomeForm(window, nil, userID, updateIncomeList)
 	})
 
+	// Bulk Upload button
+	bulkUploadButton := widget.NewButton("Bulk Upload", func() {
+		openFileDialog := dialog.NewFileOpen(
+			func(reader fyne.URIReadCloser, err error) {
+				if err != nil {
+					dialog.ShowError(err, window)
+					return
+				}
+				if reader == nil {
+					return
+				}
+				defer reader.Close()
+
+				// Check file extension before proceeding
+				if !strings.HasSuffix(reader.URI().Name(), ".csv") {
+					dialog.ShowError(errors.New("invalid file format, please upload a CSV file"), window)
+					return
+				}
+
+				incomes, parseErr := parseIncomeCSV(reader.URI().Path(), window)
+				if parseErr != nil {
+					dialog.ShowError(parseErr, window)
+					return
+				}
+
+				if len(incomes) > 0 {
+					progressBar := widget.NewProgressBar()
+					progressDialog := dialog.NewCustom("Bulk Upload Progress", "Cancel", progressBar, window)
+					progressDialog.Show()
+
+					go func() {
+						utils.BulkInsertIncome(incomes, window, progressBar)
+						updateIncomeList() // Refresh list after bulk upload
+						progressDialog.Hide()
+
+						// Update notifications
+						utils.AddNotification(models.Notification{
+							UserID:  userID,
+							Message: fmt.Sprintf("Bulk Upload: %d Incomes Uploaded", len(incomes)),
+							IsRead:  false,
+						}, window)
+					}()
+				} else {
+					dialog.ShowInformation("No Incomes Imported", "No valid incomes were found in the CSV file.", window)
+				}
+
+			}, window)
+		openFileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".csv"}))
+		openFileDialog.Show()
+	})
+
 	// Search functionality
 	searchEntry = widget.NewEntry()
 	searchEntry.SetPlaceHolder("Search by category/month...")
@@ -320,7 +374,7 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 	updateIncomeList()
 
 	// grid for the add income and export incomes button
-	exportButtonContainer := container.New(layout.NewGridLayout(2), addIncomeButton, exportToCSV)
+	exportButtonContainer := container.New(layout.NewGridLayout(3), addIncomeButton, bulkUploadButton, exportToCSV)
 
 	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, incomeList, noResultsLabel)
@@ -480,4 +534,44 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 
 	// Show the form dialog
 	dialog.ShowCustom("Income Form", "Cancel", formSave, window)
+}
+
+// Function to parse CSV and return a slice of incomes
+func parseIncomeCSV(filePath string, window fyne.Window) ([]models.Income, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		dialog.ShowError(err, window)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		dialog.ShowError(err, window)
+	}
+
+	var incomes []models.Income
+	for i, record := range records {
+		if i == 0 {
+			continue // Skip header row
+		}
+
+		if len(record) < 4 {
+			continue // Skip rows with insufficient columns
+		}
+
+		// convert amount from string to float
+		amount_float, _ := strconv.ParseFloat(record[3], 64)
+
+		income := models.Income{
+			ID:       primitive.NewObjectID(), // Generate a new unique ObjectID for each Incomes
+			Category: record[0],
+			Month:    record[1],
+			Year:     record[2],
+			Amount:   amount_float,
+		}
+		incomes = append(incomes, income)
+	}
+
+	return incomes, nil
 }
