@@ -35,4 +35,5 @@ main.iss
 
 app.log
 
-tests/
+
+data/
