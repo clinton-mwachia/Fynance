@@ -2,7 +2,7 @@
 
 ![Screenshot](assets/dashboard.png "Dashboard")
 
-Version: 1.4.0  
+Version: 1.5.0  
 Developed by: Clinton Moshe  
 Date: 18/11/2025
 
