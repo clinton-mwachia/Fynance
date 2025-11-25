@@ -262,6 +262,11 @@ func ExpenseView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObjec
 		}
 	})
 
+	// enter key to search expenses
+	searchEntry.OnSubmitted = func(s string) {
+		searchButton.OnTapped()
+	}
+
 	// Define functions for exporting data
 	exportToCSV := widget.NewButton("export to csv", func() {
 		expenses := utils.GetAllExpenses(window)

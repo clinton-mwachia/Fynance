@@ -223,6 +223,11 @@ func IncomeDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canva
 		}
 	})
 
+	// enter key to search income details
+	searchEntry.OnSubmitted = func(s string) {
+		searchButton.OnTapped()
+	}
+
 	// the search entry and bulk upload button
 	searchContainer := container.New(layout.NewGridLayout(2), searchEntry, searchButton)
 

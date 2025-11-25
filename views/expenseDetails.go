@@ -223,6 +223,11 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 		}
 	})
 
+	// enter key to search expenses
+	searchEntry.OnSubmitted = func(s string) {
+		searchButton.OnTapped()
+	}
+
 	// the search entry and bulk upload button
 	searchContainer := container.New(layout.NewGridLayout(2), searchEntry, searchButton)
 

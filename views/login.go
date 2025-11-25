@@ -64,6 +64,11 @@ func LoginView(window fyne.Window, showDashboard func()) *fyne.Container {
 		window.SetContent(RegisterView(window, showDashboard))
 	})
 
+	// enter key to login
+	passwordEntry.OnSubmitted = func(s string) {
+		loginButton.OnTapped()
+	}
+
 	form := container.NewVBox(
 		usernameEntry,
 		passwordEntry,

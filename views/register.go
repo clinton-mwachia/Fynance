@@ -50,6 +50,11 @@ func RegisterView(window fyne.Window, showDashboard func()) *fyne.Container {
 		window.SetContent(LoginView(window, showDashboard))
 	})
 
+	// enter key to register
+	passwordEntry.OnSubmitted = func(s string) {
+		registerButton.OnTapped()
+	}
+
 	form := container.NewVBox(
 		usernameEntry,
 		phoneEntry,

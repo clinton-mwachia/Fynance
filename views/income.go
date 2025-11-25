@@ -316,6 +316,11 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 		}
 	})
 
+	// enter key to search income
+	searchEntry.OnSubmitted = func(s string) {
+		searchButton.OnTapped()
+	}
+
 	// Define functions for exporting data
 	exportToCSV := widget.NewButton("export to csv", func() {
 		incomes := utils.GetAllIncomes(window)
