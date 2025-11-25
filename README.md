@@ -2,9 +2,9 @@
 
 ![Screenshot](assets/dashboard.png "Dashboard")
 
-Version: 1.5.0  
+Version: 1.6.0  
 Developed by: Clinton Moshe  
-Date: 18/11/2025
+Date: 25/11/2025
 
 Introduction:  
 Welcome to Fynance, a simple and efficient expense tracking desktop application
