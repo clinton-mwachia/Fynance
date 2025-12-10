@@ -19,6 +19,7 @@ var (
 	darkModeIcon           *widget.Button
 	settingsIcon           *widget.Button
 	notifications          []models.Notification
+	timeLabel              *widget.Label
 )
 
 var statusLabel *widget.Label
@@ -80,6 +81,20 @@ func Header(window fyne.Window) *fyne.Container {
 		toggleTheme(window)
 	})
 
+	// Real-time local time label
+	timeLabel = widget.NewLabel(time.Now().Format("15:04:05 PM"))
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			current := time.Now().Format("15:04:05 PM")
+			// Only update if value changes
+			if timeLabel.Text != current {
+				timeLabel.SetText(current)
+				window.Canvas().Refresh(timeLabel)
+			}
+		}
+	}()
+
 	// Set initial count
 	updateNotificationCount(window)
 
@@ -91,6 +106,7 @@ func Header(window fyne.Window) *fyne.Container {
 		widget.NewLabel(fmt.Sprintf("Fynance - %d", currentYear)),
 		statusLabel,
 		layout.NewSpacer(),
+		timeLabel,
 		darkModeIcon,
 		settingsIcon,
 		notificationIcon,
