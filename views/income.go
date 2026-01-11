@@ -219,7 +219,7 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 
 	// Pagination controls
 	pagination := container.NewHBox()
-	prevButton = widget.NewButton("Previous", func() {
+	prevButton = widget.NewButton("Prev", func() {
 		if currentPage > 1 {
 			currentPage--
 			updateIncomeList()
@@ -457,7 +457,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 			}
 
 			if isEdit {
-				parsedTime, err := time.Parse("2006-01-02 15:04:05", time.Now().Format("2006-01-02 15:04:05"))
+				parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
 
 				if err != nil {
 					dialog.ShowError(err, window)
@@ -491,7 +491,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 
 			} else {
 				income.ID = primitive.NewObjectID()
-				parsedTime, err := time.Parse("2006-01-02 15:04:05", time.Now().Format("2006-01-02 15:04:05"))
+				parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
 
 				if err != nil {
 					dialog.ShowError(err, window)

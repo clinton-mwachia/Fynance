@@ -128,7 +128,7 @@ func LogsView(window fyne.Window) fyne.CanvasObject {
 
 	// Pagination controls
 	pagination := container.NewHBox()
-	prevButton = widget.NewButton("Previous", func() {
+	prevButton = widget.NewButton("Prev", func() {
 		if currentPage > 1 {
 			currentPage--
 			updateLogList()

@@ -216,7 +216,7 @@ func ExpenseView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObjec
 
 	// Pagination controls
 	pagination := container.NewHBox()
-	prevButton = widget.NewButton("Previous", func() {
+	prevButton = widget.NewButton("Prev", func() {
 		if currentPage > 1 {
 			currentPage--
 			updateExpenseList()
@@ -402,7 +402,7 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 			}
 
 			if isEdit {
-				parsedTime, err := time.Parse("2006-01-02 15:04:05", time.Now().Format("2006-01-02 15:04:05"))
+				parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
 
 				if err != nil {
 					dialog.ShowError(err, window)
@@ -436,7 +436,7 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 
 			} else {
 				expense.ID = primitive.NewObjectID()
-				parsedTime, err := time.Parse("2006-01-02 15:04:05", time.Now().Format("2006-01-02 15:04:05"))
+				parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
 
 				if err != nil {
 					dialog.ShowError(err, window)
