@@ -415,9 +415,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 	})
 	category.SetSelected(income.Category)
 
-	months := []string{"Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"}
-
-	month := widget.NewSelect(months, func(s string) {})
+	month := widget.NewSelect(helpers.Months, func(s string) {})
 	month.SetSelected(income.Month)
 
 	// get current year

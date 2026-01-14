@@ -361,8 +361,7 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 	})
 	category.SetSelected(expense.Category)
 
-	months := []string{"Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"}
-	month := widget.NewSelect(months, func(s string) {})
+	month := widget.NewSelect(helpers.Months, func(s string) {})
 	month.SetSelected(expense.Month)
 
 	// get current year
