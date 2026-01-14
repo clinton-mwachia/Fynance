@@ -47,6 +47,15 @@ func ExpenseView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObjec
 	header := Header(window)
 	footer := Footer(window)
 
+	// Update visibility of no results label
+	updateNoResultsLabel := func() {
+		if len(expenses) == 0 {
+			noResultsLabel.Show()
+		} else {
+			noResultsLabel.Hide()
+		}
+	}
+
 	// Load expenses for the specified page
 	loadExpenses := func(page int) {
 		// Show progress bar dialog
@@ -76,11 +85,7 @@ func ExpenseView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObjec
 			// Update page label
 			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			if len(expenses) == 0 {
-				noResultsLabel.Show()
-			} else {
-				noResultsLabel.Hide()
-			}
+			updateNoResultsLabel()
 
 			prevButton.Disable()
 			nextButton.Disable()
@@ -93,15 +98,6 @@ func ExpenseView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObjec
 			progress.SetValue(1.0) // Complete progress
 			progressDialog.Hide()
 		}()
-	}
-
-	// Update visibility of no results label
-	updateNoResultsLabel := func() {
-		if len(expenses) == 0 {
-			noResultsLabel.Show()
-		} else {
-			noResultsLabel.Hide()
-		}
 	}
 
 	updateExpenseList := func() {

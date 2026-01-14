@@ -42,6 +42,15 @@ func IncomeDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canva
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
 
+	// Update visibility of no results label
+	updateNoResultsLabel := func() {
+		if len(details) == 0 {
+			noResultsLabel.Show()
+		} else {
+			noResultsLabel.Hide()
+		}
+	}
+
 	// Load details for the specified page
 	loadIncomeDetails := func(page int) {
 		// Check if search is active
@@ -65,11 +74,7 @@ func IncomeDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canva
 			// Update page label
 			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			if len(details) == 0 {
-				noResultsLabel.Show()
-			} else {
-				noResultsLabel.Hide()
-			}
+			updateNoResultsLabel()
 
 			prevButton.Disable()
 			nextButton.Disable()
@@ -80,15 +85,6 @@ func IncomeDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canva
 				nextButton.Enable()
 			}
 		}()
-	}
-
-	// Update visibility of no results label
-	updateNoResultsLabel := func() {
-		if len(details) == 0 {
-			noResultsLabel.Show()
-		} else {
-			noResultsLabel.Hide()
-		}
 	}
 
 	updateDetailList := func() {

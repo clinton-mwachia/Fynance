@@ -42,6 +42,15 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
 
+	// Update visibility of no results label
+	updateNoResultsLabel := func() {
+		if len(expense_details) == 0 {
+			noResultsLabel.Show()
+		} else {
+			noResultsLabel.Hide()
+		}
+	}
+
 	// Load expense_details for the specified page
 	loadExpenseDetails := func(page int) {
 		// Check if search is active
@@ -65,11 +74,7 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 			// Update page label
 			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			if len(expense_details) == 0 {
-				noResultsLabel.Show()
-			} else {
-				noResultsLabel.Hide()
-			}
+			updateNoResultsLabel()
 
 			prevButton.Disable()
 			nextButton.Disable()
@@ -80,15 +85,6 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 				nextButton.Enable()
 			}
 		}()
-	}
-
-	// Update visibility of no results label
-	updateNoResultsLabel := func() {
-		if len(expense_details) == 0 {
-			noResultsLabel.Show()
-		} else {
-			noResultsLabel.Hide()
-		}
 	}
 
 	updateExpenseDetailList := func() {

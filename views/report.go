@@ -1,6 +1,7 @@
 package views
 
 import (
+	"fynance/helpers"
 	"fynance/models"
 	"fynance/utils"
 	"strconv"
@@ -19,23 +20,6 @@ func Report(window fyne.Window) fyne.CanvasObject {
 	header := Header(window)
 	footer := Footer(window)
 
-	// Load incomes for the specified page
-	loadReports := func() {
-		// Use all incomes for normal pagination
-		months := []string{"Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"}
-		go func() {
-			reports, _ = utils.GetMonthlyReport(window, months)
-
-			reportList.Refresh()
-
-			if len(reports) == 0 {
-				noResultsLabel.Show()
-			} else {
-				noResultsLabel.Hide()
-			}
-		}()
-	}
-
 	// Update visibility of no results label
 	updateNoResultsLabel := func() {
 		if len(reports) == 0 {
@@ -43,6 +27,18 @@ func Report(window fyne.Window) fyne.CanvasObject {
 		} else {
 			noResultsLabel.Hide()
 		}
+	}
+
+	// Load incomes for the specified page
+	loadReports := func() {
+
+		go func() {
+			reports, _ = utils.GetMonthlyReport(window, helpers.Months)
+
+			reportList.Refresh()
+
+			updateNoResultsLabel()
+		}()
 	}
 
 	updateReportList := func() {

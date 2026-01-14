@@ -1,7 +1,6 @@
 package views
 
 import (
-	"fmt"
 	"fynance/models"
 	"net/http"
 	"time"
@@ -98,12 +97,9 @@ func Header(window fyne.Window) *fyne.Container {
 	// Set initial count
 	updateNotificationCount(window)
 
-	currentTime := time.Now()
-	currentYear := currentTime.Year()
-
 	// Header container
 	header := container.NewHBox(
-		widget.NewLabel(fmt.Sprintf("Fynance - %d", currentYear)),
+		widget.NewLabel("Fynance"),
 		statusLabel,
 		layout.NewSpacer(),
 		timeLabel,

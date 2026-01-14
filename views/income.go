@@ -50,6 +50,15 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 	header := Header(window)
 	footer := Footer(window)
 
+	// Update visibility of no results label
+	updateNoResultsLabel := func() {
+		if len(incomes) == 0 {
+			noResultsLabel.Show()
+		} else {
+			noResultsLabel.Hide()
+		}
+	}
+
 	// Load incomes for the specified page
 	loadIncomes := func(page int) {
 		// Show progress bar dialog
@@ -79,11 +88,7 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 			// Update page label
 			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			if len(incomes) == 0 {
-				noResultsLabel.Show()
-			} else {
-				noResultsLabel.Hide()
-			}
+			updateNoResultsLabel()
 
 			prevButton.Disable()
 			nextButton.Disable()
@@ -96,15 +101,6 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 			progress.SetValue(1.0) // Complete progress
 			progressDialog.Hide()
 		}()
-	}
-
-	// Update visibility of no results label
-	updateNoResultsLabel := func() {
-		if len(incomes) == 0 {
-			noResultsLabel.Show()
-		} else {
-			noResultsLabel.Hide()
-		}
 	}
 
 	updateIncomeList := func() {
