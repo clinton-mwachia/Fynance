@@ -1,6 +1,7 @@
 package views
 
 import (
+	"fynance/helpers"
 	"fynance/utils"
 
 	"fyne.io/fyne/v2"
@@ -39,7 +40,7 @@ func Sidebar(window fyne.Window, showParameters, showIncome,
 	buttons = append(buttons, layout.NewSpacer())
 	buttons = append(buttons, widget.NewButton("Logout", func() {
 		utils.Logger("User Logged out", "SUCCESS", window)
-
+		helpers.CurrentUserID = primitive.NilObjectID
 		showLogin()
 	}))
 
