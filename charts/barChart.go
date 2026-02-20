@@ -2,6 +2,7 @@ package charts
 
 import (
 	"image/color"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -64,7 +65,14 @@ func (b *BarChart) UpdateData(data map[string]DataPoint) {
 		spacer := canvas.NewRectangle(color.Transparent)
 		spacer.SetMinSize(fyne.NewSize(b.barWidth, b.maxHeight-height))
 
-		barContainer := container.NewVBox(spacer, bar)
+		valueLabel := widget.NewLabel(strconv.Itoa(int(value.Count)))
+		valueLabel.Alignment = fyne.TextAlignCenter
+
+		barContainer := container.NewVBox(
+			spacer,
+			valueLabel,
+			bar,
+		)
 
 		labelWidget := widget.NewLabel(label)
 
