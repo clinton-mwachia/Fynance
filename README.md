@@ -1,6 +1,6 @@
 # Fynance – Expense Tracker
 
-![Screenshot](assets/dashboard.png "Dashboard")
+![Screenshot](screenshots/dashboard.png "Dashboard")
 
 Version: 1.7.1  
 Developed by: Clinton Moshe  
