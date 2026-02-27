@@ -37,3 +37,5 @@ app.log
 
 
 data/
+
+*.csv
