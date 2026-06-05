@@ -2,9 +2,9 @@
 
 ![Screenshot](screenshots/dashboard.png "Dashboard")
 
-Version: 1.8.0 
+Version: 1.8.1
 Developed by: Clinton Moshe  
-Date: 21/02/2026
+Date: 05/06/2026
 
 Introduction:  
 Welcome to Fynance, a simple and efficient expense tracking desktop application
@@ -48,5 +48,3 @@ For any assistance or inquiries, contact:
 📞 Phone: +254746646331 / +254738816913
 
 Thank you for choosing Fynance! We hope this tool helps you take control of your finances with ease.
-
-==================================================

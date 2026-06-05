@@ -1,5 +1,5 @@
 [Details]
-  Icon = "assets/fynance_icon.png"
-  Name = "fynance"
-  ID = "fynance_app"
-  Build = 19
+Icon = "assets/fynance_icon.png"
+Name = "fynance"
+ID = "fynance_app"
+Build = 20
