@@ -11,9 +11,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var reportList *widget.List
+var monthlyReportList *widget.List
 
-func Report(window fyne.Window) fyne.CanvasObject {
+func MonthlyReport(window fyne.Window) fyne.CanvasObject {
 	var reports []models.Report
 	var noResultsLabel *widget.Label
 
@@ -35,7 +35,7 @@ func Report(window fyne.Window) fyne.CanvasObject {
 		go func() {
 			reports, _ = utils.GetMonthlyReport(window, helpers.Months)
 
-			reportList.Refresh()
+			monthlyReportList.Refresh()
 
 			updateNoResultsLabel()
 		}()
@@ -48,14 +48,14 @@ func Report(window fyne.Window) fyne.CanvasObject {
 
 	// Header Row with Titles
 	titleRow := container.NewGridWithColumns(4,
-		widget.NewLabelWithStyle("Month", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Period", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Total Income", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Total Expenses", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Balance", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
 	// Create the incomes list
-	reportList = widget.NewList(
+	monthlyReportList = widget.NewList(
 		func() int {
 			return len(reports)
 		},
@@ -93,7 +93,7 @@ func Report(window fyne.Window) fyne.CanvasObject {
 			totalExpensesLabel := row.Objects[2].(*widget.Label)
 			balanceLabel := row.Objects[3].(*widget.Label)
 
-			monthLabel.SetText(report.Month)
+			monthLabel.SetText(report.Period)
 
 			totalIncome_string := strconv.FormatFloat(report.TotalIncome, 'f', -1, 64)
 			totalIncomeLabel.SetText(totalIncome_string)
@@ -113,7 +113,7 @@ func Report(window fyne.Window) fyne.CanvasObject {
 
 	updateReportList()
 
-	listContainer := container.NewBorder(titleRow, nil, nil, nil, reportList, noResultsLabel)
+	listContainer := container.NewBorder(titleRow, nil, nil, nil, monthlyReportList, noResultsLabel)
 
 	return container.NewBorder(header, footer, nil, nil, listContainer)
 }

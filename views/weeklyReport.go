@@ -1,0 +1,118 @@
+package views
+
+import (
+	"fynance/models"
+	"fynance/utils"
+	"strconv"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+)
+
+var weeklyReportList *widget.List
+
+func WeeklyReport(window fyne.Window) fyne.CanvasObject {
+	var reports []models.Report
+	var noResultsLabel *widget.Label
+
+	header := Header(window)
+	footer := Footer(window)
+
+	// Update visibility of no results label
+	updateNoResultsLabel := func() {
+		if len(reports) == 0 {
+			noResultsLabel.Show()
+		} else {
+			noResultsLabel.Hide()
+		}
+	}
+
+	// Load incomes for the specified page
+	loadReports := func() {
+
+		go func() {
+			reports, _ = utils.GetWeeklyReport(window)
+
+			weeklyReportList.Refresh()
+
+			updateNoResultsLabel()
+		}()
+	}
+
+	updateReportList := func() {
+		loadReports()
+		updateNoResultsLabel()
+	}
+
+	// Header Row with Titles
+	titleRow := container.NewGridWithColumns(4,
+		widget.NewLabelWithStyle("Period", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Total Income", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Total Expenses", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Balance", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+	)
+
+	// Create the incomes list
+	weeklyReportList = widget.NewList(
+		func() int {
+			return len(reports)
+		},
+		func() fyne.CanvasObject {
+			// month label
+			monthLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
+			monthLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
+
+			// total income label
+			totalIncomeLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
+
+			// total expenses label
+			totalExpensesLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
+			totalExpensesLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
+
+			// balance label
+			balanceLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
+			balanceLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
+
+			row := container.NewGridWithColumns(4,
+				monthLabel,
+				totalIncomeLabel,
+				totalExpensesLabel,
+				balanceLabel,
+			)
+			return row
+		},
+		func(id widget.ListItemID, obj fyne.CanvasObject) {
+			report := reports[id]
+			row := obj.(*fyne.Container)
+
+			// Retrieve the components in the row
+			monthLabel := row.Objects[0].(*widget.Label)
+			totalIncomeLabel := row.Objects[1].(*widget.Label)
+			totalExpensesLabel := row.Objects[2].(*widget.Label)
+			balanceLabel := row.Objects[3].(*widget.Label)
+
+			monthLabel.SetText(report.Period)
+
+			totalIncome_string := strconv.FormatFloat(report.TotalIncome, 'f', -1, 64)
+			totalIncomeLabel.SetText(totalIncome_string)
+
+			totalExpense_string := strconv.FormatFloat(report.TotalExpense, 'f', -1, 64)
+			totalExpensesLabel.SetText(totalExpense_string)
+
+			balance_string := strconv.FormatFloat(report.Balance, 'f', -1, 64)
+			balanceLabel.SetText(balance_string)
+
+		},
+	)
+
+	// No results label
+	noResultsLabel = widget.NewLabel("No results found")
+	noResultsLabel.Hide() // Hide by default
+
+	updateReportList()
+
+	listContainer := container.NewBorder(titleRow, nil, nil, nil, weeklyReportList, noResultsLabel)
+
+	return container.NewBorder(header, footer, nil, nil, listContainer)
+}
