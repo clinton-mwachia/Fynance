@@ -28,7 +28,9 @@ func (r *Router) layout(content fyne.CanvasObject) {
 		r.ShowParameters,
 		r.ShowIncome,
 		r.ShowExpenses,
-		r.ShowReport,
+		r.ShowDailyReport,
+		r.ShowWeeklyReport,
+		r.ShowMonthlyReport,
 		r.ShowContact,
 		r.ShowDashboard,
 		r.ShowLogin,
@@ -44,12 +46,20 @@ func (r *Router) ShowDashboard() {
 	r.layout(views.Dashboard(r.Window))
 }
 
+func (r *Router) ShowDailyReport() {
+	r.layout(views.DailyReport(r.Window))
+}
+
+func (r *Router) ShowWeeklyReport() {
+	r.layout(views.WeeklyReport(r.Window))
+}
+
 func (r *Router) ShowIncome() {
 	r.layout(views.IncomeView(r.Window, r.UserId))
 }
 
-func (r *Router) ShowReport() {
-	r.layout(views.Report(r.Window))
+func (r *Router) ShowMonthlyReport() {
+	r.layout(views.MonthlyReport(r.Window))
 }
 
 func (r *Router) ShowExpenses() {
