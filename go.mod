@@ -7,6 +7,7 @@ toolchain go1.24.4
 require (
 	fyne.io/fyne/v2 v2.5.5
 	github.com/faiface/beep v1.1.0
+	github.com/jung-kurt/gofpdf/v2 v2.17.3
 	go.mongodb.org/mongo-driver v1.17.3
 	golang.org/x/crypto v0.38.0
 )
