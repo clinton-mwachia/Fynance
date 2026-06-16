@@ -27,9 +27,9 @@ func Sidebar(window fyne.Window, showParameters, showIncome,
 
 	// 3. Create the inner Report options layout
 	reportButtons := container.NewVBox(
-		widget.NewButton("Daily Report", showDailyReport),
-		widget.NewButton("Weekly Report", showWeeklyReport),
-		widget.NewButton("Monthly Report", showMonthlyReport),
+		widget.NewButton("Daily", showDailyReport),
+		widget.NewButton("Weekly", showWeeklyReport),
+		widget.NewButton("Monthly", showMonthlyReport),
 	)
 
 	// 4. Wrap inner buttons inside an Accordion Item
