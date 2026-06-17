@@ -1,13 +1,17 @@
 package views
 
 import (
+	"encoding/csv"
 	"fynance/helpers"
 	"fynance/models"
 	"fynance/utils"
+	"os"
 	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -111,9 +115,92 @@ func MonthlyReport(window fyne.Window) fyne.CanvasObject {
 	noResultsLabel = widget.NewLabel("No results found")
 	noResultsLabel.Hide() // Hide by default
 
+	exportToCSVBtn := widget.NewButton("Export to CSV", func() {
+		ExportMonthlyCSVReport(window)
+	})
+
+	exportToPDFBtn := widget.NewButton("Export to PDF", func() {
+		showMonthlyReportPDFDialog(window)
+	})
+
 	updateReportList()
+
+	// grid for the add income and export incomes button
+	exportButtonContainer := container.New(layout.NewGridLayout(2), exportToPDFBtn, exportToCSVBtn)
 
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, monthlyReportList, noResultsLabel)
 
-	return container.NewBorder(header, footer, nil, nil, listContainer)
+	listWrapper := container.NewBorder(exportButtonContainer, nil, nil, nil, listContainer)
+
+	return container.NewBorder(header, footer, nil, nil, listWrapper)
+}
+
+func ExportMonthlyCSVReport(window fyne.Window) {
+	records, err := utils.GetMonthlyReport(window, helpers.Months)
+
+	if err != nil {
+		dialog.ShowError(err, window)
+	} else {
+		if len(records) != 0 {
+			// Create progress dialog
+			progress := widget.NewProgressBar()
+			progressDialog := dialog.NewCustom("Exporting Monthly Reports", "Cancel", progress, window)
+			progressDialog.Show()
+
+			go func() {
+				file, err := os.Create("monthly_report.csv")
+				if err != nil {
+					dialog.ShowError(err, window)
+					return
+				}
+				defer file.Close()
+
+				writer := csv.NewWriter(file)
+				defer writer.Flush()
+
+				// Write header
+				writer.Write([]string{"Period", "Total Income", "Total Expense", "Balance"})
+
+				// Write income data
+				for i, record := range records {
+					total_income_string := strconv.Itoa(int(record.TotalIncome))
+					total_expense_string := strconv.Itoa(int(record.TotalExpense))
+					balance_string := strconv.Itoa(int(record.Balance))
+
+					writer.Write([]string{
+						record.Period,
+						total_income_string,
+						total_expense_string,
+						balance_string,
+					})
+
+					// Update progress
+					progress.SetValue(float64(i+1) / float64(len(records)))
+				}
+
+				// Close progress dialog after exporting
+				progressDialog.Hide()
+				dialog.ShowInformation("Export Successful", "Records have been exported to monthly_report.csv", window)
+			}()
+		} else {
+			dialog.ShowInformation("Export Failed", "No data to export", window)
+		}
+	}
+}
+
+// show report dialog
+func showMonthlyReportPDFDialog(w fyne.Window) {
+	records, _ := utils.GetMonthlyReport(w, helpers.Months)
+
+	if len(records) == 0 {
+		dialog.ShowInformation("Monthly Report", "NO DATA TO GENERATE REPORT", w)
+	} else {
+		dialog.ShowCustomConfirm("Generate Report", "Generate", "Cancel",
+			widget.NewLabel("Generate PDF LIST"),
+			func(confirm bool) {
+				if confirm {
+					go helpers.GenerateReportPDF(w, records, "monthly_report")
+				}
+			}, w)
+	}
 }

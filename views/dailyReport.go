@@ -199,7 +199,7 @@ func showDailyReportPDFDialog(w fyne.Window) {
 			widget.NewLabel("Generate PDF LIST"),
 			func(confirm bool) {
 				if confirm {
-					go helpers.GenerateDailyReportPDF(w, records)
+					go helpers.GenerateReportPDF(w, records, "daily_report")
 				}
 			}, w)
 	}
