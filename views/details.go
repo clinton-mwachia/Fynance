@@ -1,12 +1,14 @@
 package views
 
 import (
+	"fynance/helpers"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func ParametersView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject {
+func ParametersView(window fyne.Window) fyne.CanvasObject {
+	userID := helpers.CurrentUserID
 	header := Header(window)
 	footer := Footer(window)
 	content := container.NewAppTabs(
