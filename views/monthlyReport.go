@@ -29,7 +29,9 @@ func MonthlyReport(window fyne.Window) fyne.CanvasObject {
 		if len(reports) == 0 {
 			noResultsLabel.Show()
 		} else {
-			noResultsLabel.Hide()
+			fyne.Do(func() {
+				noResultsLabel.Hide()
+			})
 		}
 	}
 
@@ -39,7 +41,9 @@ func MonthlyReport(window fyne.Window) fyne.CanvasObject {
 		go func() {
 			reports, _ = utils.GetMonthlyReport(window, helpers.Months)
 
-			monthlyReportList.Refresh()
+			fyne.Do(func() {
+				monthlyReportList.Refresh()
+			})
 
 			updateNoResultsLabel()
 		}()
