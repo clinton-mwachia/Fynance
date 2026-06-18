@@ -2,19 +2,24 @@ package views
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"fynance/helpers"
 	"fynance/models"
 	"fynance/utils"
+	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -246,6 +251,10 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 		showExpenseForm(window, nil, userID, updateExpenseList)
 	})
 
+	downloadExpensesTemplateBtn := widget.NewButton("Download Template", func() {
+		DownloadExpensesTemplate(window, "./templates/expenses_template.xlsx")
+	})
+
 	// Search functionality
 	searchEntry = widget.NewEntry()
 	searchEntry.SetPlaceHolder("Search by category/month...")
@@ -327,7 +336,7 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 	updateExpenseList()
 
 	// grid for the add expense and export expenses button
-	exportButtonContainer := container.New(layout.NewGridLayout(2), addExpenseButton, exportToCSV)
+	exportButtonContainer := container.New(layout.NewGridLayout(3), addExpenseButton, exportToCSV, downloadExpensesTemplateBtn)
 
 	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, expenseList, noResultsLabel)
@@ -485,4 +494,106 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 
 	// Show the form dialog
 	dialog.ShowCustom("Expense Form", "Cancel", formSave, window)
+}
+
+// download expenses template
+func DownloadExpensesTemplate(parent fyne.Window, sourcePath string) {
+	info, err := os.Stat(sourcePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			dialog.ShowError(
+				fmt.Errorf("source file does not exist:\n%s", sourcePath),
+				parent,
+			)
+			return
+		}
+
+		dialog.ShowError(
+			fmt.Errorf("could not access source file: %w", err),
+			parent,
+		)
+		return
+	}
+
+	if info.IsDir() {
+		dialog.ShowError(
+			fmt.Errorf("source path is a directory:\n%s", sourcePath),
+			parent,
+		)
+		return
+	}
+
+	if strings.ToLower(filepath.Ext(sourcePath)) != ".xlsx" {
+		dialog.ShowError(
+			fmt.Errorf("source file must have a .xlsx extension"),
+			parent,
+		)
+		return
+	}
+
+	saveDialog := dialog.NewFileSave(
+		func(writer fyne.URIWriteCloser, err error) {
+			if err != nil {
+				dialog.ShowError(
+					fmt.Errorf("failed to open save dialog: %w", err),
+					parent,
+				)
+				return
+			}
+
+			// User cancelled.
+			if writer == nil {
+				return
+			}
+
+			success := false
+			defer func() {
+				writer.Close()
+
+				// Remove incomplete files if the copy failed.
+				if !success && writer.URI() != nil &&
+					writer.URI().Scheme() == "file" {
+
+					_ = os.Remove(writer.URI().Path())
+				}
+			}()
+
+			src, err := os.Open(sourcePath)
+			if err != nil {
+				dialog.ShowError(
+					fmt.Errorf("failed to open source file: %w", err),
+					parent,
+				)
+				return
+			}
+			defer src.Close()
+
+			if _, err := io.Copy(writer, src); err != nil {
+				dialog.ShowError(
+					fmt.Errorf("failed to save file: %w", err),
+					parent,
+				)
+				return
+			}
+
+			success = true
+
+			dialog.ShowInformation(
+				"Download Complete",
+				fmt.Sprintf(
+					"Expenses Template saved to:\n%s",
+					writer.URI().Path(),
+				),
+				parent,
+			)
+		},
+		parent,
+	)
+
+	saveDialog.SetFileName(filepath.Base(sourcePath))
+	saveDialog.SetFilter(
+		storage.NewExtensionFileFilter([]string{".xlsx"}),
+	)
+
+	saveDialog.Show()
 }

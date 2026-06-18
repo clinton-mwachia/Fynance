@@ -7,8 +7,10 @@ import (
 	"fynance/helpers"
 	"fynance/models"
 	"fynance/utils"
+	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -247,6 +249,10 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 		showIncomeForm(window, nil, userID, updateIncomeList)
 	})
 
+	downloadIncomeTemplateBtn := widget.NewButton("Get Template", func() {
+		DownloadIncomeTemplate(window, "./templates/income_template.xlsx")
+	})
+
 	// Bulk Upload button
 	bulkUploadButton := widget.NewButton("Bulk Upload", func() {
 		openFileDialog := dialog.NewFileOpen(
@@ -379,7 +385,8 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 	updateIncomeList()
 
 	// grid for the add income and export incomes button
-	exportButtonContainer := container.New(layout.NewGridLayout(3), addIncomeButton, bulkUploadButton, exportToCSV)
+	exportButtonContainer := container.New(layout.NewGridLayout(4),
+		addIncomeButton, bulkUploadButton, exportToCSV, downloadIncomeTemplateBtn)
 
 	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, incomeList, noResultsLabel)
@@ -581,4 +588,106 @@ func parseIncomeCSV(filePath string, window fyne.Window) ([]models.Income, error
 	}
 
 	return incomes, nil
+}
+
+// download income template
+func DownloadIncomeTemplate(parent fyne.Window, sourcePath string) {
+	info, err := os.Stat(sourcePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			dialog.ShowError(
+				fmt.Errorf("source file does not exist:\n%s", sourcePath),
+				parent,
+			)
+			return
+		}
+
+		dialog.ShowError(
+			fmt.Errorf("could not access source file: %w", err),
+			parent,
+		)
+		return
+	}
+
+	if info.IsDir() {
+		dialog.ShowError(
+			fmt.Errorf("source path is a directory:\n%s", sourcePath),
+			parent,
+		)
+		return
+	}
+
+	if strings.ToLower(filepath.Ext(sourcePath)) != ".xlsx" {
+		dialog.ShowError(
+			fmt.Errorf("source file must have a .xlsx extension"),
+			parent,
+		)
+		return
+	}
+
+	saveDialog := dialog.NewFileSave(
+		func(writer fyne.URIWriteCloser, err error) {
+			if err != nil {
+				dialog.ShowError(
+					fmt.Errorf("failed to open save dialog: %w", err),
+					parent,
+				)
+				return
+			}
+
+			// User cancelled.
+			if writer == nil {
+				return
+			}
+
+			success := false
+			defer func() {
+				writer.Close()
+
+				// Remove incomplete files if the copy failed.
+				if !success && writer.URI() != nil &&
+					writer.URI().Scheme() == "file" {
+
+					_ = os.Remove(writer.URI().Path())
+				}
+			}()
+
+			src, err := os.Open(sourcePath)
+			if err != nil {
+				dialog.ShowError(
+					fmt.Errorf("failed to open source file: %w", err),
+					parent,
+				)
+				return
+			}
+			defer src.Close()
+
+			if _, err := io.Copy(writer, src); err != nil {
+				dialog.ShowError(
+					fmt.Errorf("failed to save file: %w", err),
+					parent,
+				)
+				return
+			}
+
+			success = true
+
+			dialog.ShowInformation(
+				"Download Complete",
+				fmt.Sprintf(
+					"Income Template saved to:\n%s",
+					writer.URI().Path(),
+				),
+				parent,
+			)
+		},
+		parent,
+	)
+
+	saveDialog.SetFileName(filepath.Base(sourcePath))
+	saveDialog.SetFilter(
+		storage.NewExtensionFileFilter([]string{".xlsx"}),
+	)
+
+	saveDialog.Show()
 }
