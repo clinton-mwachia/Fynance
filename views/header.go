@@ -31,12 +31,16 @@ func isOnline() bool {
 
 // Function to display the status label and hide it after 5 seconds
 func showStatus(status string, window fyne.Window) {
-	statusLabel.SetText(status)
-	statusLabel.Show()
+	fyne.Do(func() {
+		statusLabel.SetText(status)
+		statusLabel.Show()
+	})
 	go func() {
 		time.Sleep(5 * time.Second)
-		window.Canvas().Refresh(statusLabel)
-		statusLabel.Hide()
+		fyne.Do(func() {
+			window.Canvas().Refresh(statusLabel)
+			statusLabel.Hide()
+		})
 	}()
 }
 
@@ -88,8 +92,10 @@ func Header(window fyne.Window) *fyne.Container {
 			current := time.Now().Format("15:04:05 PM")
 			// Only update if value changes
 			if timeLabel.Text != current {
-				timeLabel.SetText(current)
-				window.Canvas().Refresh(timeLabel)
+				fyne.Do(func() {
+					timeLabel.SetText(current)
+					window.Canvas().Refresh(timeLabel)
+				})
 			}
 		}
 	}()
