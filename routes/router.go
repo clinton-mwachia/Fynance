@@ -1,23 +1,19 @@
 package router
 
 import (
-	"fynance/helpers"
 	"fynance/views"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Router struct {
 	Window fyne.Window
-	UserId primitive.ObjectID
 }
 
 func NewRouter(window fyne.Window) *Router {
 	return &Router{
 		Window: window,
-		UserId: helpers.CurrentUserID,
 	}
 }
 
@@ -34,7 +30,6 @@ func (r *Router) layout(content fyne.CanvasObject) {
 		r.ShowContact,
 		r.ShowDashboard,
 		r.ShowLogin,
-		r.UserId,
 	)
 
 	r.Window.SetContent(
@@ -55,7 +50,7 @@ func (r *Router) ShowWeeklyReport() {
 }
 
 func (r *Router) ShowIncome() {
-	r.layout(views.IncomeView(r.Window, r.UserId))
+	r.layout(views.IncomeView(r.Window))
 }
 
 func (r *Router) ShowMonthlyReport() {
@@ -63,11 +58,11 @@ func (r *Router) ShowMonthlyReport() {
 }
 
 func (r *Router) ShowExpenses() {
-	r.layout(views.ExpenseView(r.Window, r.UserId))
+	r.layout(views.ExpenseView(r.Window))
 }
 
 func (r *Router) ShowParameters() {
-	r.layout(views.ParametersView(r.Window, r.UserId))
+	r.layout(views.ParametersView(r.Window))
 }
 
 func (r *Router) ShowContact() {
