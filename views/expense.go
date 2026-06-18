@@ -22,6 +22,7 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/xuri/excelize/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -255,6 +256,11 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 		DownloadExpensesTemplate(window, "./templates/expenses_template.xlsx")
 	})
 
+	// Bulk Upload button
+	bulkUploadExpensesButton := widget.NewButton("Bulk Upload", func() {
+		BulkUploadExpenses(window, updateExpenseList, userID)
+	})
+
 	// Search functionality
 	searchEntry = widget.NewEntry()
 	searchEntry.SetPlaceHolder("Search by category/month...")
@@ -336,7 +342,7 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 	updateExpenseList()
 
 	// grid for the add expense and export expenses button
-	exportButtonContainer := container.New(layout.NewGridLayout(3), addExpenseButton, exportToCSV, downloadExpensesTemplateBtn)
+	exportButtonContainer := container.New(layout.NewGridLayout(4), addExpenseButton, bulkUploadExpensesButton, exportToCSV, downloadExpensesTemplateBtn)
 
 	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, expenseList, noResultsLabel)
@@ -596,4 +602,136 @@ func DownloadExpensesTemplate(parent fyne.Window, sourcePath string) {
 	)
 
 	saveDialog.Show()
+}
+
+func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID primitive.ObjectID) {
+	openFileDialog := dialog.NewFileOpen(
+		func(reader fyne.URIReadCloser, err error) {
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+			if reader == nil {
+				return
+			}
+			defer reader.Close()
+
+			// Check file extension before proceeding
+			if !strings.HasSuffix(reader.URI().Name(), ".xlsx") {
+				dialog.ShowError(errors.New("invalid file format, please upload a xlsx file"), window)
+				return
+			}
+
+			expenses, parseErr := parseIncomeXLSX(reader.URI().Path(), window)
+			if parseErr != nil {
+				dialog.ShowError(parseErr, window)
+				return
+			}
+
+			if len(expenses) > 0 {
+				progressBar := widget.NewProgressBar()
+				progressDialog := dialog.NewCustom("Bulk Upload Progress", "Cancel", progressBar, window)
+				progressDialog.Show()
+
+				go func() {
+					utils.BulkInsertIncome(expenses, window, progressBar)
+					updateExpenseList() // Refresh list after bulk upload
+					fyne.Do(func() {
+						progressDialog.Hide()
+					})
+
+					// Update notifications
+					utils.AddNotification(models.Notification{
+						UserID:  userID,
+						Message: fmt.Sprintf("Bulk Upload: %d Incomes Uploaded", len(expenses)),
+						IsRead:  false,
+					}, window)
+				}()
+			} else {
+				dialog.ShowInformation("No Incomes Imported", "No valid expenses were found in the CSV file.", window)
+			}
+
+		}, window)
+	openFileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".xlsx"}))
+	openFileDialog.Show()
+}
+
+// Function to parse xlsx and return expenses
+func parseExpensesXLSX(filePath string, window fyne.Window) ([]models.Expense, error) {
+	f, err := excelize.OpenFile(filePath)
+	if err != nil {
+		dialog.ShowError(err, window)
+		return nil, err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			dialog.ShowError(err, window)
+		}
+	}()
+
+	sheetName := f.GetSheetName(0)
+	if sheetName == "" {
+		err := fmt.Errorf("workbook contains no sheets")
+		dialog.ShowError(err, window)
+		return nil, err
+	}
+
+	rows, err := f.GetRows(sheetName)
+	if err != nil {
+		dialog.ShowError(err, window)
+		return nil, err
+	}
+
+	if len(rows) <= 1 {
+		return []models.Expense{}, nil
+	}
+
+	expenses := make([]models.Expense, 0, len(rows)-1)
+
+	for i, row := range rows {
+		// Skip header row.
+		if i == 0 {
+			continue
+		}
+
+		// Skip empty rows.
+		if len(row) == 0 {
+			continue
+		}
+
+		// Ensure the expected columns exist.
+		if len(row) < 4 {
+			continue
+		}
+
+		category := strings.TrimSpace(row[0])
+		month := strings.TrimSpace(row[1])
+		year := strings.TrimSpace(row[2])
+		amountStr := strings.TrimSpace(row[3])
+
+		if category == "" && month == "" && year == "" && amountStr == "" {
+			continue
+		}
+
+		amount, err := strconv.ParseFloat(amountStr, 64)
+		if err != nil {
+			dialog.ShowError(
+				fmt.Errorf("invalid amount on row %d: %q", i+1, amountStr),
+				window,
+			)
+			continue
+		}
+
+		expense := models.Expense{
+			ID:       primitive.NewObjectID(),
+			Category: category,
+			Month:    month,
+			Year:     year,
+			Amount:   amount,
+		}
+
+		expenses = append(expenses, expense)
+	}
+
+	return expenses, nil
 }
