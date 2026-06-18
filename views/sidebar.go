@@ -14,7 +14,7 @@ import (
 // Add your specific view callbacks for daily, weekly, and monthly reports to the parameters
 func Sidebar(window fyne.Window, showParameters, showIncome,
 	showExpenses, showDailyReport, showWeeklyReport, showMonthlyReport, showContact, showDashboard,
-	showLogin func(), userID primitive.ObjectID) *fyne.Container {
+	showLogin func()) *fyne.Container {
 
 	// 1. Core items container
 	sidebarItems := []fyne.CanvasObject{}

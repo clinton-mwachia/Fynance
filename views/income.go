@@ -25,7 +25,8 @@ import (
 
 var incomeList *widget.List
 
-func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject {
+func IncomeView(window fyne.Window) fyne.CanvasObject {
+	userID := helpers.CurrentUserID
 	// Load the settings on app startup
 	settings, err := LoadSettings()
 	if err != nil {
@@ -80,26 +81,28 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 				totalIncomes = utils.CountIncomes(window)
 			}
 
-			incomeList.Refresh()
+			fyne.Do(func() {
+				incomeList.Refresh()
 
-			// Enable or disable pagination buttons based on the current page and total pages
-			totalPages := int(math.Ceil(float64(totalIncomes) / float64(pageSize)))
+				// Enable or disable pagination buttons based on the current page and total pages
+				totalPages := int(math.Ceil(float64(totalIncomes) / float64(pageSize)))
 
-			// Update page label
-			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
+				// Update page label
+				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			updateNoResultsLabel()
+				updateNoResultsLabel()
 
-			prevButton.Disable()
-			nextButton.Disable()
-			if currentPage > 1 {
-				prevButton.Enable()
-			}
-			if currentPage < totalPages {
-				nextButton.Enable()
-			}
-			progress.SetValue(1.0) // Complete progress
-			progressDialog.Hide()
+				prevButton.Disable()
+				nextButton.Disable()
+				if currentPage > 1 {
+					prevButton.Enable()
+				}
+				if currentPage < totalPages {
+					nextButton.Enable()
+				}
+				progress.SetValue(1.0) // Complete progress
+				progressDialog.Hide()
+			})
 		}()
 	}
 
@@ -189,6 +192,7 @@ func IncomeView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject
 								// Create a new notification
 								// fetch user by ID
 								var user = utils.GetUserByID(userID, window)
+
 								newNotification := models.Notification{
 									UserID:  user.ID,
 									Message: user.Username + " deleted Income " + income.Category,
@@ -455,6 +459,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 
 				if err != nil {
 					dialog.ShowError(err, window)
+					fmt.Printf("%s", err.Error())
 					return
 				}
 
@@ -463,6 +468,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 
 				if err != nil {
 					dialog.ShowError(err, window)
+					fmt.Printf("%s", err.Error())
 				} else {
 					// Create a new notification
 					userID := helpers.CurrentUserID
@@ -489,6 +495,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 
 				if err != nil {
 					dialog.ShowError(err, window)
+					fmt.Printf("%s", err.Error())
 					return
 				}
 				income.CreatedAt = parsedTime
@@ -497,6 +504,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 
 				if err != nil {
 					dialog.ShowError(err, window)
+					fmt.Printf("%s", err.Error())
 				} else {
 					// Create a new notification
 					userID := helpers.CurrentUserID

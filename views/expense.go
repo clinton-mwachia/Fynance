@@ -22,7 +22,8 @@ import (
 
 var expenseList *widget.List
 
-func ExpenseView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject {
+func ExpenseView(window fyne.Window) fyne.CanvasObject {
+	userID := helpers.CurrentUserID
 	// Load the settings on app startup
 	settings, err := LoadSettings()
 	if err != nil {
@@ -77,25 +78,30 @@ func ExpenseView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObjec
 				totalExpenses = utils.CountExpenses(window)
 			}
 
-			expenseList.Refresh()
+			fyne.Do(func() {
+				expenseList.Refresh()
 
-			// Enable or disable pagination buttons based on the current page and total pages
-			totalPages := int(math.Ceil(float64(totalExpenses) / float64(pageSize)))
+				// Enable or disable pagination buttons based on the current page and total pages
+				totalPages := int(math.Ceil(float64(totalExpenses) / float64(pageSize)))
 
-			// Update page label
-			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
+				// Update page label
 
-			updateNoResultsLabel()
+				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			prevButton.Disable()
-			nextButton.Disable()
-			if currentPage > 1 {
-				prevButton.Enable()
-			}
-			if currentPage < totalPages {
-				nextButton.Enable()
-			}
-			progress.SetValue(1.0) // Complete progress
+				updateNoResultsLabel()
+
+				prevButton.Disable()
+				nextButton.Disable()
+				if currentPage > 1 {
+					prevButton.Enable()
+				}
+				if currentPage < totalPages {
+					nextButton.Enable()
+				}
+
+				progress.SetValue(1.0) // Complete progress
+
+			})
 			progressDialog.Hide()
 		}()
 	}
