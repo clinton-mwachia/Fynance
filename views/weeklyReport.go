@@ -39,7 +39,9 @@ func WeeklyReport(window fyne.Window) fyne.CanvasObject {
 		go func() {
 			reports, _ = utils.GetWeeklyReport(window)
 
-			weeklyReportList.Refresh()
+			fyne.Do(func() {
+				weeklyReportList.Refresh()
+			})
 
 			updateNoResultsLabel()
 		}()
