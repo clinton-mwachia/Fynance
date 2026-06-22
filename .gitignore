@@ -41,5 +41,3 @@ data/
 *.csv
 
 reports/*
-
-settings.json
