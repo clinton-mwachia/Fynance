@@ -341,8 +341,15 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 	// Load the initial set of expenses
 	updateExpenseList()
 
-	// grid for the add expense and export expenses button
-	exportButtonContainer := container.New(layout.NewGridLayout(4), addExpenseButton, bulkUploadExpensesButton, exportToCSV, downloadExpensesTemplateBtn)
+	var exportButtonContainer *fyne.Container
+
+	if settings.IsBulkUpload {
+		exportButtonContainer = container.New(layout.NewGridLayout(4),
+			addExpenseButton, bulkUploadExpensesButton, exportToCSV, downloadExpensesTemplateBtn)
+	} else {
+		exportButtonContainer = container.New(layout.NewGridLayout(2),
+			addExpenseButton, exportToCSV)
+	}
 
 	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, expenseList, noResultsLabel)
@@ -622,7 +629,7 @@ func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID pri
 				return
 			}
 
-			expenses, parseErr := parseIncomeXLSX(reader.URI().Path(), window)
+			expenses, parseErr := parseExpensesXLSX(reader.URI().Path(), window)
 			if parseErr != nil {
 				dialog.ShowError(parseErr, window)
 				return
@@ -634,7 +641,7 @@ func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID pri
 				progressDialog.Show()
 
 				go func() {
-					utils.BulkInsertIncome(expenses, window, progressBar)
+					utils.BulkInsertExpenses(expenses, window, progressBar)
 					updateExpenseList() // Refresh list after bulk upload
 					fyne.Do(func() {
 						progressDialog.Hide()
@@ -643,12 +650,12 @@ func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID pri
 					// Update notifications
 					utils.AddNotification(models.Notification{
 						UserID:  userID,
-						Message: fmt.Sprintf("Bulk Upload: %d Incomes Uploaded", len(expenses)),
+						Message: fmt.Sprintf("Bulk Upload: %d Expenses Uploaded", len(expenses)),
 						IsRead:  false,
 					}, window)
 				}()
 			} else {
-				dialog.ShowInformation("No Incomes Imported", "No valid expenses were found in the CSV file.", window)
+				dialog.ShowInformation("No Expenses Imported", "No valid expenses were found in the XLSX file.", window)
 			}
 
 		}, window)
