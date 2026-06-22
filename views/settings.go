@@ -146,6 +146,13 @@ func showSettings(window fyne.Window) {
 	}
 	loadUser()
 
+	// load settings
+	settings, err := LoadSettings()
+
+	if err != nil {
+		dialog.ShowError(err, window)
+	}
+
 	ImageFile = canvas.NewImageFromFile("assets/profile.jpg")
 
 	ImageFile.SetMinSize(fyne.NewSize(200, 200))
@@ -167,9 +174,29 @@ func showSettings(window fyne.Window) {
 		userDetailsContainer.Refresh()
 	}
 
-	refreshUserDetails()
+	// selects
+	pageSizeSelect := widget.NewSelect([]string{"5", "10", "20", "30"}, func(value string) {
+		updatePageSize(value, window)
+	})
 
-	// Variable to track current theme mode
+	pageSizeSelect.SetSelected(settings.PageSize)
+
+	// bulk Upload
+	bulkUploadSelect := widget.NewRadioGroup([]string{"Yes", "No"}, func(s string) {
+		toggleBulkUpload(window)
+	})
+
+	var bulkUpload string
+
+	if settings.IsBulkUpload {
+		bulkUpload = "Yes"
+	} else {
+		bulkUpload = "No"
+	}
+
+	bulkUploadSelect.SetSelected(bulkUpload)
+
+	refreshUserDetails()
 
 	content := container.NewHBox(
 		ImageFile,
@@ -186,14 +213,11 @@ func showSettings(window fyne.Window) {
 			container.NewGridWithColumns(2,
 				container.NewVBox(
 					widget.NewLabel("Items Per Page"),
-					widget.NewSelect([]string{"5", "10", "20", "30"}, func(value string) {
-						updatePageSize(value, window)
-					})),
+					pageSizeSelect,
+				),
 				container.NewVBox(
 					widget.NewLabel("Bulk Upload?"),
-					widget.NewRadioGroup([]string{"Yes", "No"}, func(s string) {
-						toggleBulkUpload(window)
-					}),
+					bulkUploadSelect,
 				),
 			),
 		),
