@@ -297,9 +297,15 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 	// Load the initial set of incomes
 	updateIncomeList()
 
-	// grid for the add income and export incomes button
-	exportButtonContainer := container.New(layout.NewGridLayout(4),
-		addIncomeButton, bulkUploadIncomeButton, exportToCSV, downloadIncomeTemplateBtn)
+	var exportButtonContainer *fyne.Container
+
+	if settings.IsBulkUpload {
+		exportButtonContainer = container.New(layout.NewGridLayout(4),
+			addIncomeButton, bulkUploadIncomeButton, exportToCSV, downloadIncomeTemplateBtn)
+	} else {
+		exportButtonContainer = container.New(layout.NewGridLayout(2),
+			addIncomeButton, exportToCSV)
+	}
 
 	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, incomeList, noResultsLabel)
