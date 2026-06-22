@@ -111,7 +111,7 @@ func toggleBulkUpload(window fyne.Window) {
 	isBulkUpload = !isBulkUpload
 
 	// Save the current theme setting
-	settings := &AppSettings{PageSize: saved_settings.PageSize, IsDarkMode: isDarkMode, IsBulkUpload: isBulkUpload}
+	settings := &AppSettings{PageSize: saved_settings.PageSize, IsDarkMode: saved_settings.IsDarkMode, IsBulkUpload: isBulkUpload}
 	err = SaveSettings(settings)
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error saving settings", window)
