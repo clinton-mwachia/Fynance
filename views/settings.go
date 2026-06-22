@@ -21,8 +21,9 @@ import (
 
 // Struct to hold app settings
 type AppSettings struct {
-	IsDarkMode bool   `json:"is_dark_mode"`
-	PageSize   string `json:"page_size"`
+	IsDarkMode   bool   `json:"is_dark_mode"`
+	PageSize     string `json:"page_size"`
+	IsBulkUpload bool   `json:"is_bulk_upload"`
 }
 
 const settingsFilePath = "settings.json"
@@ -92,7 +93,25 @@ func toggleTheme(window fyne.Window) {
 	applyTheme()
 
 	// Save the current theme setting
-	settings := &AppSettings{PageSize: saved_settings.PageSize, IsDarkMode: isDarkMode}
+	settings := &AppSettings{PageSize: saved_settings.PageSize, IsDarkMode: isDarkMode, IsBulkUpload: saved_settings.IsBulkUpload}
+	err = SaveSettings(settings)
+	if err != nil {
+		dialog.ShowInformation("User Settings", "Error saving settings", window)
+	}
+}
+
+var isBulkUpload bool = false
+
+func toggleBulkUpload(window fyne.Window) {
+	// load settings
+	saved_settings, err := LoadSettings()
+	if err != nil {
+		dialog.ShowInformation("Loading settings", "Error loading settings: "+err.Error(), window)
+	}
+	isBulkUpload = !isBulkUpload
+
+	// Save the current theme setting
+	settings := &AppSettings{PageSize: saved_settings.PageSize, IsDarkMode: isDarkMode, IsBulkUpload: isBulkUpload}
 	err = SaveSettings(settings)
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error saving settings", window)
@@ -107,7 +126,7 @@ func updatePageSize(pageSize string, window fyne.Window) {
 		dialog.ShowInformation("Loading settings", "Error loading settings: "+err.Error(), window)
 	}
 	// Save the current theme setting
-	settings := &AppSettings{IsDarkMode: saved_settings.IsDarkMode, PageSize: pageSize}
+	settings := &AppSettings{IsDarkMode: saved_settings.IsDarkMode, PageSize: pageSize, IsBulkUpload: saved_settings.IsBulkUpload}
 
 	err = SaveSettings(settings)
 	if err != nil {
@@ -164,12 +183,18 @@ func showSettings(window fyne.Window) {
 					showChangePasswordDialog(window, user)
 				}),
 			),
-			container.NewGridWithColumns(1,
+			container.NewGridWithColumns(2,
 				container.NewVBox(
 					widget.NewLabel("Items Per Page"),
 					widget.NewSelect([]string{"5", "10", "20", "30"}, func(value string) {
 						updatePageSize(value, window)
 					})),
+				container.NewVBox(
+					widget.NewLabel("Bulk Upload?"),
+					widget.NewRadioGroup([]string{"Yes", "No"}, func(s string) {
+						toggleBulkUpload(window)
+					}),
+				),
 			),
 		),
 	)
