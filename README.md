@@ -2,7 +2,7 @@
 
 ![Screenshot](screenshots/dashboard.png "Dashboard")
 
-> Version: 1.11.0
+> Version: 1.11.1
 >
 > Developed by: Clinton Moshe
 >
