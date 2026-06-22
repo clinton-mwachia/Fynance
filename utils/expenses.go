@@ -7,6 +7,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -165,7 +166,7 @@ func SearchExpenses(searchText string, window fyne.Window) []models.Expense {
 
 }
 
-// count income by month in current year
+// count expense by month in current year
 func SumExpenseByMonth(month string) (MonthlyExpense, error) {
 	collection := GetCollection("expenses")
 
@@ -188,7 +189,7 @@ func SumExpenseByMonth(month string) (MonthlyExpense, error) {
 	}
 	defer cursor.Close(ctx)
 
-	// Default result (if no income is found)
+	// Default result (if no expense is found)
 	result := MonthlyExpense{
 		Month: month,
 		Total: 0,
@@ -281,4 +282,39 @@ func GetExpenseStats(ctx context.Context) (map[string]float64, error) {
 	}
 
 	return stats, nil
+}
+
+// BulkInsertExpenses inserts multiple expenses into the database safely.
+func BulkInsertExpenses(expenses []models.Expense, window fyne.Window, progressBar *widget.ProgressBar) {
+	collection := GetCollection("expenses")
+	var docs []any
+	totalExpenses := len(expenses)
+	progress := 0
+
+	for i, expense := range expenses {
+		parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
+		if err != nil {
+			dialog.ShowError(err, window)
+			return
+		}
+		expense.CreatedAt = parsedTime
+		expense.UpdatedAt = parsedTime
+		docs = append(docs, expense)
+
+		// Update progress bar for each expense processed
+		progress = i + 1
+		progressBar.SetValue(float64(progress) / float64(totalExpenses))
+
+		// Flush the documents in smaller batches
+		if len(docs) == 100 || i == totalExpenses-1 {
+			_, err := collection.InsertMany(context.TODO(), docs)
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+			docs = nil // Reset docs slice for next batch
+		}
+	}
+
+	dialog.ShowInformation("Success", "Expenses added successfully!", window)
 }
