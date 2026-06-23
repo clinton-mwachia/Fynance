@@ -23,7 +23,7 @@ import (
 type AppSettings struct {
 	IsDarkMode   bool   `json:"is_dark_mode"`
 	PageSize     string `json:"page_size"`
-	IsBulkUpload bool   `json:"is_bulk_upload"`
+	IsBulkUpload string `json:"is_bulk_upload"`
 }
 
 const settingsFilePath = "settings.json"
@@ -33,7 +33,7 @@ func LoadSettings() (*AppSettings, error) {
 	// Check if the settings file exists
 	if _, err := os.Stat(settingsFilePath); os.IsNotExist(err) {
 		// If it doesn't exist, return default settings
-		return &AppSettings{IsDarkMode: false, PageSize: "10"}, nil
+		return &AppSettings{IsDarkMode: false, PageSize: "10", IsBulkUpload: "No"}, nil
 	}
 
 	// Read the settings file
@@ -100,18 +100,16 @@ func toggleTheme(window fyne.Window) {
 	}
 }
 
-var isBulkUpload bool = false
-
-func toggleBulkUpload(window fyne.Window) {
+func toggleBulkUpload(value string, window fyne.Window) {
 	// load settings
 	saved_settings, err := LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("Loading settings", "Error loading settings: "+err.Error(), window)
 	}
-	isBulkUpload = !isBulkUpload
 
 	// Save the current theme setting
-	settings := &AppSettings{PageSize: saved_settings.PageSize, IsDarkMode: saved_settings.IsDarkMode, IsBulkUpload: isBulkUpload}
+	settings := &AppSettings{PageSize: saved_settings.PageSize,
+		IsDarkMode: saved_settings.IsDarkMode, IsBulkUpload: value}
 	err = SaveSettings(settings)
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error saving settings", window)
@@ -183,18 +181,10 @@ func showSettings(window fyne.Window) {
 
 	// bulk Upload
 	bulkUploadSelect := widget.NewRadioGroup([]string{"Yes", "No"}, func(s string) {
-		toggleBulkUpload(window)
+		toggleBulkUpload(s, window)
 	})
 
-	var bulkUpload string
-
-	if settings.IsBulkUpload {
-		bulkUpload = "Yes"
-	} else {
-		bulkUpload = "No"
-	}
-
-	bulkUploadSelect.SetSelected(bulkUpload)
+	bulkUploadSelect.SetSelected(settings.IsBulkUpload)
 
 	refreshUserDetails()
 
