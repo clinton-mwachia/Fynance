@@ -343,7 +343,7 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 
 	var exportButtonContainer *fyne.Container
 
-	if settings.IsBulkUpload {
+	if settings.IsBulkUpload == "Yes" {
 		exportButtonContainer = container.New(layout.NewGridLayout(4),
 			addExpenseButton, bulkUploadExpensesButton, exportToCSV, downloadExpensesTemplateBtn)
 	} else {
