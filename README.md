@@ -17,11 +17,12 @@ and gain insights into your spending habits.
 
 ## Features
 
-✔ Expense Management: Add, update, delete, and categorize expenses.  
-✔ Income Management: Record and track income sources.  
-✔ Export Data: Export financial reports to CSV.  
-✔ Dark/Light Mode: Switch between themes for better usability.  
-✔ User Authentication: Secure login with password protection.
+1. Expense Management: Add, update, delete, and categorize expenses.
+2. Income Management: Record and track income sources.
+3. Export Data: Export financial reports to CSV.
+4. Template: income and expenses xlsx templates for bulk upload.
+5. Dark/Light Mode: Switch between themes for better usability.
+6. User Authentication: Secure login with password protection.
 
 ## System Requirements
 
@@ -33,10 +34,11 @@ and gain insights into your spending habits.
 
 ## Installation Instructions
 
-1. Download [Fynance](https://github.com/clinton-mwachia/Fynance/releases).
-2. Run the installer and follow the on-screen instructions.
-3. Choose the location where you want the application to be installed.
-4. Once installed, launch Fynance from the Start Menu or desktop shortcut.
+1. Download MongoDB and install.
+2. Download [Fynance](https://github.com/clinton-mwachia/Fynance/releases).
+3. Run the installer and follow the on-screen instructions.
+4. Choose the location where you want the application to be installed.
+5. Once installed, launch Fynance from the Start Menu or desktop shortcut.
 
 ## How to Use
 
