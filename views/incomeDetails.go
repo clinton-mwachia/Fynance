@@ -66,24 +66,26 @@ func IncomeDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canva
 				totalDetails = utils.CountDetails(window)
 			}
 
-			incomeDetailList.Refresh()
+			fyne.Do(func() {
+				incomeDetailList.Refresh()
 
-			// Enable or disable pagination buttons based on the current page and total pages
-			totalPages := int(math.Ceil(float64(totalDetails) / float64(pageSize)))
+				// Enable or disable pagination buttons based on the current page and total pages
+				totalPages := int(math.Ceil(float64(totalDetails) / float64(pageSize)))
 
-			// Update page label
-			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
+				// Update page label
+				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			updateNoResultsLabel()
+				updateNoResultsLabel()
 
-			prevButton.Disable()
-			nextButton.Disable()
-			if currentPage > 1 {
-				prevButton.Enable()
-			}
-			if currentPage < totalPages {
-				nextButton.Enable()
-			}
+				prevButton.Disable()
+				nextButton.Disable()
+				if currentPage > 1 {
+					prevButton.Enable()
+				}
+				if currentPage < totalPages {
+					nextButton.Enable()
+				}
+			})
 		}()
 	}
 
