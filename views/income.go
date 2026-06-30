@@ -193,7 +193,7 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 			// Important: Set the checked state before setting OnChanged
 			checkbox.SetChecked(selectedIncomes[id])
 
-			// Update checkbox state based on selectedTodos map
+			// Update checkbox state based on selectedExpenses map
 			checkbox.OnChanged = func(checked bool) {
 				selectedIncomes[id] = checked
 			}
