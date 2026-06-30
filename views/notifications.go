@@ -67,6 +67,8 @@ func showNotifications(window fyne.Window) {
 func updateNotificationCount(window fyne.Window) {
 	userID := helpers.CurrentUserID
 	unreadCount := utils.GetUnreadNotificationsCount(userID, window)
-	notificationCountLabel.SetText(strconv.Itoa(unreadCount))
-	notificationIcon.Refresh()
+	fyne.Do(func() {
+		notificationCountLabel.SetText(strconv.Itoa(unreadCount))
+		notificationIcon.Refresh()
+	})
 }
