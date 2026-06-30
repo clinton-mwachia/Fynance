@@ -99,8 +99,8 @@ func Dashboard(window fyne.Window) *fyne.Container {
 
 	// Charts layout
 	chartsContainer := container.NewGridWithColumns(2,
-		widget.NewCard("Top Income", "", chartApp.incomeChart.Container()),
-		widget.NewCard("Top Expenses", "", chartApp.expensesChart.Container()),
+		widget.NewCard("Income", "", chartApp.incomeChart.Container()),
+		widget.NewCard("Expenses", "", chartApp.expensesChart.Container()),
 	)
 
 	// Layout for the statistics boxes

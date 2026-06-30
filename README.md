@@ -2,11 +2,11 @@
 
 ![Screenshot](screenshots/dashboard.png "Dashboard")
 
-> Version: 1.11.2
+> Version: 1.11.4
 >
 > Developed by: Clinton Moshe
 >
-> Updated On: 22/06/2026
+> Updated On: 30/06/2026
 
 ## Introduction
 
