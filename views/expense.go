@@ -1,6 +1,7 @@
 package views
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -23,10 +24,12 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/xuri/excelize/v2"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var expenseList *widget.List
+var selectedExpenses map[int]bool // Track selected expenses
 
 func ExpenseView(window fyne.Window) fyne.CanvasObject {
 	userID := helpers.CurrentUserID
@@ -42,6 +45,9 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 		dialog.ShowError(err, window)
 	}
 
+	// Initialize selected expenses map
+	selectedExpenses = make(map[int]bool)
+
 	var expenses []models.Expense
 	var currentPage int = 1
 	var totalExpenses int64 = 0
@@ -53,6 +59,25 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 
 	header := Header(window)
 	footer := Footer(window)
+
+	// Selection controls with updated functionality
+	selectAllButton := widget.NewButton("Select All", func() {
+		// Update the selection map for all visible todos
+		for i := range expenses {
+			selectedExpenses[i] = true
+		}
+
+		// Force refresh of the entire list
+		expenseList.Refresh()
+	})
+
+	deselectAllButton := widget.NewButton("Deselect All", func() {
+		// Clear all selections
+		selectedExpenses = make(map[int]bool)
+
+		// Force refresh of the entire list
+		expenseList.Refresh()
+	})
 
 	// Update visibility of no results label
 	updateNoResultsLabel := func() {
@@ -106,9 +131,8 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 				}
 
 				progress.SetValue(1.0) // Complete progress
-
+				progressDialog.Hide()
 			})
-			progressDialog.Hide()
 		}()
 	}
 
@@ -119,9 +143,9 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 
 	// Header Row with Titles
 	titleRow := container.NewGridWithColumns(5,
+		widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Category", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Month", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Year", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Amount", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Actions", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
@@ -132,6 +156,8 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 			return len(expenses)
 		},
 		func() fyne.CanvasObject {
+			// initialise a checkbox
+			checkbox := widget.NewCheck("", nil)
 			// category label
 			categoryLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			categoryLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
@@ -139,9 +165,6 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 			// month  label
 			monthLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			monthLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
-
-			// year label
-			yearLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 
 			// amount label
 			amountLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
@@ -151,9 +174,9 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 			deleteButton := widget.NewButtonWithIcon("", theme.DeleteIcon(), nil)
 
 			row := container.NewGridWithColumns(5,
+				checkbox,
 				categoryLabel,
 				monthLabel,
-				yearLabel,
 				amountLabel,
 				container.NewHBox(editButton, deleteButton),
 			)
@@ -163,10 +186,19 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 			expense := expenses[id]
 			row := obj.(*fyne.Container)
 
+			checkbox := row.Objects[0].(*widget.Check)
+
+			// Important: Set the checked state before setting OnChanged
+			checkbox.SetChecked(selectedExpenses[id])
+
+			// Update checkbox state based on selectedExpenses map
+			checkbox.OnChanged = func(checked bool) {
+				selectedExpenses[id] = checked
+			}
+
 			// Retrieve the components in the row
-			categoryLabel := row.Objects[0].(*widget.Label)
-			monthLabel := row.Objects[1].(*widget.Label)
-			yearLabel := row.Objects[2].(*widget.Label)
+			categoryLabel := row.Objects[1].(*widget.Label)
+			monthLabel := row.Objects[2].(*widget.Label)
 			amountLabel := row.Objects[3].(*widget.Label)
 
 			editButton := row.Objects[4].(*fyne.Container).Objects[0].(*widget.Button)
@@ -174,7 +206,6 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 
 			categoryLabel.SetText(expense.Category)
 			monthLabel.SetText(expense.Month)
-			yearLabel.SetText(expense.Year)
 
 			// amount to string
 			//amount_string := strconv.Itoa(int(expense.Amount))
@@ -221,6 +252,101 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 			}
 		},
 	)
+
+	// display all selecte expenses
+	deleteSelectedExpensesButton := widget.NewButton("Delete Selected", func() {
+		var selectedExpensesList []struct {
+			id       primitive.ObjectID
+			category string
+			month    string
+		}
+
+		// Collect selected expenses
+		for id, expense := range expenses {
+			if selectedExpenses[id] {
+				selectedExpensesList = append(selectedExpensesList, struct {
+					id       primitive.ObjectID
+					category string
+					month    string
+				}{
+					id:       expense.ID,
+					category: expense.Category,
+					month:    expense.Month,
+				})
+			}
+		}
+
+		if len(selectedExpensesList) == 0 {
+			dialog.ShowInformation("No Selection", "Please select at least one expense to delete", window)
+			return
+		}
+
+		dialog.ShowConfirm("Confirm Deletion", "Are you sure you want to delete the selected expenses?", func(confirm bool) {
+			if !confirm {
+				return
+			}
+
+			progress := widget.NewProgressBar()
+			progressDialog := dialog.NewCustom("Deleting Expenses", "Cancel", progress, window)
+			cancelChan := make(chan struct{})
+
+			progressDialog.SetOnClosed(func() {
+				close(cancelChan)
+			})
+			progressDialog.Show()
+
+			go func() {
+				var successCount, failCount int
+				var results []string
+				collection := utils.GetCollection("expenses") // Get the collection
+
+				for i, expenseData := range selectedExpensesList {
+					select {
+					case <-cancelChan:
+						dialog.ShowInformation("Cancelled", "Deletion was cancelled", window)
+						return
+					default:
+						// Delete from database
+						_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": expenseData.id})
+						if err != nil {
+							failCount++
+							results = append(results, fmt.Sprintf("❌ Failed to delete: %s", err.Error()))
+						} else {
+							successCount++
+							results = append(results, fmt.Sprintf("✓ Successfully deleted: %s", expenseData.category))
+
+						}
+
+						// Update progress
+						fyne.Do(func() {
+							progress.SetValue(float64(i+1) / float64(len(selectedExpensesList)))
+						})
+					}
+				}
+
+				fyne.Do(func() {
+					progressDialog.Hide()
+				})
+
+				// Update notifications
+				utils.AddNotification(models.Notification{
+					UserID:  userID,
+					Message: fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount),
+					IsRead:  false,
+				}, window)
+
+				updateNotificationCount(window)
+
+				detail := fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount)
+				utils.Logger(detail, "SUCCESS", window)
+
+				updateExpenseList() // Refresh UI after deletion
+
+				// Show deletion results
+				dialog.ShowInformation("Deletion Results", strings.Join(results, "\n"), window)
+			}()
+		}, window)
+	})
 
 	// Pagination controls
 	pagination := container.NewHBox()
@@ -347,7 +473,8 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 		exportButtonContainer = container.New(layout.NewGridLayout(4),
 			addExpenseButton, bulkUploadExpensesButton, exportToCSV, downloadExpensesTemplateBtn)
 	} else {
-		exportButtonContainer = container.New(layout.NewGridLayout(2),
+		exportButtonContainer = container.New(layout.NewGridLayout(5),
+			selectAllButton, deselectAllButton, deleteSelectedExpensesButton,
 			addExpenseButton, exportToCSV)
 	}
 
