@@ -327,7 +327,9 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 					}
 				}
 
-				progressDialog.Hide()
+				fyne.Do(func() {
+					progressDialog.Hide()
+				})
 
 				// Update notifications
 				utils.AddNotification(models.Notification{

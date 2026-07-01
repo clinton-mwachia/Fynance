@@ -108,6 +108,8 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 				})
 				totalExpenses = utils.CountExpenses(window)
 			}
+			// Reset selected incomes when loading new page
+			selectedExpenses = make(map[int]bool)
 
 			fyne.Do(func() {
 				expenseList.Refresh()
