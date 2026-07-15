@@ -1,6 +1,8 @@
 # Fynance – Expense Tracker
 
-![Screenshot](screenshots/dashboard.png "Dashboard")
+## Demo
+
+https://github.com/user-attachments/assets/4ad96707-7a43-46ff-86a0-5bd779025e39
 
 > Version: 1.11.6
 >
