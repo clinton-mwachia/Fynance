@@ -66,24 +66,26 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 				totalExpenseDetails = utils.CountExpenseDetails(window)
 			}
 
-			expenseDetailList.Refresh()
+			fyne.Do(func() {
+				expenseDetailList.Refresh()
 
-			// Enable or disable pagination buttons based on the current page and total pages
-			totalPages := int(math.Ceil(float64(totalExpenseDetails) / float64(pageSize)))
+				// Enable or disable pagination buttons based on the current page and total pages
+				totalPages := int(math.Ceil(float64(totalExpenseDetails) / float64(pageSize)))
 
-			// Update page label
-			pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
+				// Update page label
+				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
-			updateNoResultsLabel()
+				updateNoResultsLabel()
 
-			prevButton.Disable()
-			nextButton.Disable()
-			if currentPage > 1 {
-				prevButton.Enable()
-			}
-			if currentPage < totalPages {
-				nextButton.Enable()
-			}
+				prevButton.Disable()
+				nextButton.Disable()
+				if currentPage > 1 {
+					prevButton.Enable()
+				}
+				if currentPage < totalPages {
+					nextButton.Enable()
+				}
+			})
 		}()
 	}
 
