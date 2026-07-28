@@ -12,19 +12,17 @@ https://github.com/user-attachments/assets/4ad96707-7a43-46ff-86a0-5bd779025e39
 
 ## Introduction
 
-Welcome to Fynance, a simple and efficient expense tracking desktop application
-designed to help individuals and businesses manage their income and expenses.
-With Fynance, you can track your financial transactions, generate reports,
-and gain insights into your spending habits.
+Fynance is a desktop application designed to help individuals and businesses track financial transactions, generate reports, and gain daily, weekly, and monthly insights on their financial status.
 
 ## Features
 
-1. Expense Management: Add, update, delete, and categorize expenses.
-2. Income Management: Record and track income sources.
+1. Expense Management: Manage and track Spending.
+2. Income Management: Manage and track Income sources.
 3. Export Data: Export financial reports to CSV.
 4. Template: income and expenses xlsx templates for bulk upload.
 5. Dark/Light Mode: Switch between themes for better usability.
 6. User Authentication: Secure login with password protection.
+7. Reports: View Daily, Weekly and Monthly Reports.
 
 ## System Requirements
 
@@ -46,13 +44,14 @@ and gain insights into your spending habits.
 
 1. First-Time Setup: Create an admin account when opening the app for the first time.
 2. Login: Use your credentials to access the dashboard.
-3. Add Income & Expenses: Enter financial transactions under the Income or Expenses section.
-4. View Reports: Check the Reports section for a detailed breakdown of income vs. expenses.
-5. Export Data: Save financial reports as CSV for record-keeping.
+3. Define Categories: Define Income or Expenses Categories.
+4. Add Income & Expenses: Add Income or Expenses for various categories.
+5. View Reports: View daily, weekly and monthly income and expenses reports.
+6. Export Data: Save financial reports as CSV for record-keeping.
 
 ## Contact For custom softwares
 
-For any assistance or inquiries, contact:  
+For any Assistance or Inquiries, contact:  
 📧 Email: clintonmwachia9@gmail.com  
 📞 Phone: +254746646331 / +254738816913
 
