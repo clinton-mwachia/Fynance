@@ -29,7 +29,9 @@ func WeeklyReport(window fyne.Window) fyne.CanvasObject {
 		if len(reports) == 0 {
 			noResultsLabel.Show()
 		} else {
-			noResultsLabel.Hide()
+			fyne.Do(func() {
+				noResultsLabel.Hide()
+			})
 		}
 	}
 
