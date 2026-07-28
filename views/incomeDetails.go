@@ -268,7 +268,7 @@ func showDetailForm(window fyne.Window, existing *models.IncomeDetail, UserID pr
 	// Create form
 	form := &widget.Form{
 		Items: []*widget.FormItem{
-			{Text: "Income Category", Widget: incomeCategory},
+			{Text: "Category", Widget: incomeCategory},
 		},
 		OnSubmit: func() {
 			detail.IncomeCategory = incomeCategory.Text

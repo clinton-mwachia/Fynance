@@ -266,7 +266,7 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 	// Create form
 	form := &widget.Form{
 		Items: []*widget.FormItem{
-			{Text: "Expense Category", Widget: expenseCategory},
+			{Text: "Category", Widget: expenseCategory},
 		},
 		OnSubmit: func() {
 			expense_detaill.ExpenseCategory = expenseCategory.Text
