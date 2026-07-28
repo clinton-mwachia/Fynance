@@ -76,6 +76,7 @@ func GetExpenseDetailsPaginated(page, limit int, w fyne.Window) []models.Expense
 	findOptions := options.Find()
 	findOptions.SetSkip(int64(skip))
 	findOptions.SetLimit(int64(limit))
+	findOptions.SetSort(bson.D{{Key: "expense_category", Value: 1}})
 
 	var expense_details []models.ExpenseDetail
 

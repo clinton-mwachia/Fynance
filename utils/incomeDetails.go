@@ -76,6 +76,7 @@ func GetDetailsPaginated(page, limit int, w fyne.Window) []models.IncomeDetail {
 	findOptions := options.Find()
 	findOptions.SetSkip(int64(skip))
 	findOptions.SetLimit(int64(limit))
+	findOptions.SetSort(bson.D{{Key: "income_category", Value: 1}})
 
 	var income_details []models.IncomeDetail
 
