@@ -515,7 +515,13 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 	category.SetSelected(expense.Category)
 
 	month := widget.NewSelect(helpers.Months, func(s string) {})
-	month.SetSelected(expense.Month)
+	today := time.Now().Month()
+
+	if expense.Month == "" {
+		month.SetSelected(today.String())
+	} else {
+		month.SetSelected(expense.Month)
+	}
 
 	// get current year
 	currentTime := time.Now()

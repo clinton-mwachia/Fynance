@@ -571,8 +571,14 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 	})
 	category.SetSelected(income.Category)
 
+	today := time.Now().Month()
+
 	month := widget.NewSelect(helpers.Months, func(s string) {})
-	month.SetSelected(income.Month)
+	if income.Month == "" {
+		month.SetSelected(today.String())
+	} else {
+		month.SetSelected(income.Month)
+	}
 
 	// get current year
 	currentTime := time.Now()
