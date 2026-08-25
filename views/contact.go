@@ -1,15 +1,14 @@
 package views
 
 import (
+	"fynance/layouts"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
 
-func ContactView(window fyne.Window) fyne.CanvasObject {
-	header := Header(window)
-	footer := Footer(window)
-
+func ContactView(window fyne.Window) *fyne.Container {
 	title := widget.NewLabelWithStyle("Need an upgrade or an app made just for you?",
 		fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	subtitle := widget.NewLabelWithStyle("Contact Us Through:", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -22,5 +21,5 @@ func ContactView(window fyne.Window) fyne.CanvasObject {
 
 	contentCard := widget.NewCard("", "", content)
 
-	return container.NewBorder(header, footer, nil, nil, container.NewCenter(contentCard))
+	return layouts.BaseLayout(window, "Contact", container.NewCenter(contentCard))
 }

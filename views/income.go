@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"fynance/helpers"
+	"fynance/layouts"
 	"fynance/models"
+	"fynance/pages"
 	"fynance/utils"
 	"io"
 	"math"
@@ -31,10 +33,10 @@ import (
 var incomeList *widget.List
 var selectedIncomes map[int]bool // Track selected incomes
 
-func IncomeView(window fyne.Window) fyne.CanvasObject {
+func IncomeView(window fyne.Window) *fyne.Container {
 	userID := helpers.CurrentUserID
 	// Load the settings on app startup
-	settings, err := LoadSettings()
+	settings, err := pages.LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error loading settings", window)
 	}
@@ -56,9 +58,6 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 	var searchResults []models.Income
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
-
-	header := Header(window)
-	footer := Footer(window)
 
 	// Selection controls with updated functionality
 	selectAllButton := widget.NewButton("Select All", func() {
@@ -242,7 +241,7 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 
 								//utils.PlayNotificationSound(window)
 
-								updateNotificationCount(window)
+								pages.UpdateNotificationCount(window)
 
 								detail := user.Username + " deleted Income " + income.Category
 								utils.Logger(detail, "SUCCESS", window)
@@ -338,7 +337,7 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 					IsRead:  false,
 				}, window)
 
-				updateNotificationCount(window)
+				pages.UpdateNotificationCount(window)
 
 				detail := fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount)
 				utils.Logger(detail, "SUCCESS", window)
@@ -445,7 +444,7 @@ func IncomeView(window fyne.Window) fyne.CanvasObject {
 	listWrapper := container.NewBorder(exportButtonContainer, pagination, nil, nil, listContainer)
 
 	// Return the final container with all elements
-	return container.NewBorder(header, footer, nil, nil, container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
+	return layouts.BaseLayout(window, "Income", container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
 }
 
 func BulkUploadIncome(window fyne.Window, updateIncomeList func(), userID primitive.ObjectID) {
@@ -647,7 +646,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 					utils.Logger(detail, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Income updated successfully!", window)
 				}
 
@@ -683,7 +682,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 					utils.Logger(detail, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Income added", window)
 				}
 

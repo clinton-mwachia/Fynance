@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"fynance/layouts"
 	"fynance/models"
 	"fynance/utils"
 	"math"
@@ -20,7 +21,7 @@ const (
 	logsPerPage = 5
 )
 
-func LogsView(window fyne.Window) fyne.CanvasObject {
+func LogsView(window fyne.Window) *fyne.Container {
 	var logList *widget.List
 	var logs []models.Log
 	var currentPage int = 1
@@ -30,9 +31,6 @@ func LogsView(window fyne.Window) fyne.CanvasObject {
 	var searchResults []models.Log
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
-
-	header := Header(window)
-	footer := Footer(window)
 
 	// Load logs for the specified page
 	loadLogs := func(page int) {
@@ -238,6 +236,6 @@ func LogsView(window fyne.Window) fyne.CanvasObject {
 	listWrapper := container.NewBorder(exportButtonContainer, pagination, nil, nil, listContainer)
 
 	// Return the final container with all elements
-	return container.NewBorder(header, footer, nil, nil, container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
+	return layouts.BaseLayout(window, "Logs", container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
 
 }

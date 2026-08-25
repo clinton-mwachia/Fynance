@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"fynance/helpers"
+	"fynance/layouts"
 	"fynance/models"
+	"fynance/pages"
 	"fynance/utils"
 	"io"
 	"math"
@@ -31,10 +33,10 @@ import (
 var expenseList *widget.List
 var selectedExpenses map[int]bool // Track selected expenses
 
-func ExpenseView(window fyne.Window) fyne.CanvasObject {
+func ExpenseView(window fyne.Window) *fyne.Container {
 	userID := helpers.CurrentUserID
 	// Load the settings on app startup
-	settings, err := LoadSettings()
+	settings, err := pages.LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error loading settings", window)
 	}
@@ -56,9 +58,6 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 	var searchResults []models.Expense
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
-
-	header := Header(window)
-	footer := Footer(window)
 
 	// Selection controls with updated functionality
 	selectAllButton := widget.NewButton("Select All", func() {
@@ -241,7 +240,7 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 
 								//utils.PlayNotificationSound(window)
 
-								updateNotificationCount(window)
+								pages.UpdateNotificationCount(window)
 
 								detail := user.Username + " deleted Expense " + expense.Category
 								utils.Logger(detail, "SUCCESS", window)
@@ -337,7 +336,7 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 					IsRead:  false,
 				}, window)
 
-				updateNotificationCount(window)
+				pages.UpdateNotificationCount(window)
 
 				detail := fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount)
 				utils.Logger(detail, "SUCCESS", window)
@@ -486,7 +485,7 @@ func ExpenseView(window fyne.Window) fyne.CanvasObject {
 	listWrapper := container.NewBorder(exportButtonContainer, pagination, nil, nil, listContainer)
 
 	// Return the final container with all elements
-	return container.NewBorder(header, footer, nil, nil, container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
+	return layouts.BaseLayout(window, "Expenses", container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
 }
 
 // Function to display the expense form for adding or editing a expense
@@ -588,7 +587,7 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 					utils.Logger(detail, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Expense updated successfully!", window)
 				}
 
@@ -622,7 +621,7 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 					utils.Logger(detail, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Expense added", window)
 				}
 

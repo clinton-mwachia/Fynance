@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fynance/helpers"
 	"fynance/models"
+	"fynance/pages"
 	"fynance/utils"
 	"math"
 	"strconv"
@@ -22,7 +23,7 @@ var incomeDetailList *widget.List
 
 func IncomeDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject {
 	// Load the settings on app startup
-	settings, err := LoadSettings()
+	settings, err := pages.LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error loading settings", window)
 	}
@@ -159,7 +160,7 @@ func IncomeDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canva
 
 								////utils.PlayNotificationSound(window)
 
-								updateNotificationCount(window)
+								pages.UpdateNotificationCount(window)
 
 								detail := user.Username + " Deleted " + detail.IncomeCategory
 								utils.Logger(detail, "SUCCESS", window)
@@ -307,7 +308,7 @@ func showDetailForm(window fyne.Window, existing *models.IncomeDetail, UserID pr
 					utils.Logger(content, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Income Detail updated successfully!", window)
 				}
 
@@ -341,7 +342,7 @@ func showDetailForm(window fyne.Window, existing *models.IncomeDetail, UserID pr
 					utils.Logger(content, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Income Detail added", window)
 				}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fynance/helpers"
 	"fynance/models"
+	"fynance/pages"
 	"fynance/utils"
 	"math"
 	"strconv"
@@ -22,7 +23,7 @@ var expenseDetailList *widget.List
 
 func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject {
 	// Load the settings on app startup
-	settings, err := LoadSettings()
+	settings, err := pages.LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error loading settings", window)
 	}
@@ -159,7 +160,7 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 
 								//utils.PlayNotificationSound(window)
 
-								updateNotificationCount(window)
+								pages.UpdateNotificationCount(window)
 
 								detail := user.Username + " Deleted " + expense_detail.ExpenseCategory
 								utils.Logger(detail, "SUCCESS", window)
@@ -307,7 +308,7 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 					utils.Logger(content, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "expense Detail updated successfully!", window)
 				}
 
@@ -341,7 +342,7 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 					utils.Logger(content, "SUCCESS", window)
 
 					// Update the notification count
-					updateNotificationCount(window)
+					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Expense Detail added", window)
 				}
 

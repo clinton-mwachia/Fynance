@@ -2,6 +2,7 @@ package views
 
 import (
 	"fynance/helpers"
+	"fynance/layouts"
 	"fynance/utils"
 	"fynance/visuals"
 
@@ -11,9 +12,6 @@ import (
 )
 
 func Dashboard(window fyne.Window) *fyne.Container {
-	header := Header(window)
-	footer := Footer(window)
-
 	// fetch to totals
 	totalIncome := utils.TotalIncome(window)
 	totalExpenses := utils.TotalExpenses(window)
@@ -37,5 +35,5 @@ func Dashboard(window fyne.Window) *fyne.Container {
 		balanceBox,
 	)
 
-	return container.NewBorder(header, footer, nil, nil, container.NewVBox(statsContainer, chartsContainer))
+	return layouts.BaseLayout(window, "Dashboard", container.NewVBox(statsContainer, chartsContainer))
 }

@@ -3,6 +3,7 @@ package views
 import (
 	"encoding/csv"
 	"fynance/helpers"
+	"fynance/layouts"
 	"fynance/models"
 	"fynance/utils"
 	"os"
@@ -17,12 +18,9 @@ import (
 
 var weeklyReportList *widget.List
 
-func WeeklyReport(window fyne.Window) fyne.CanvasObject {
+func WeeklyReport(window fyne.Window) *fyne.Container {
 	var reports []models.Report
 	var noResultsLabel *widget.Label
-
-	header := Header(window)
-	footer := Footer(window)
 
 	// Update visibility of no results label
 	updateNoResultsLabel := func() {
@@ -136,7 +134,7 @@ func WeeklyReport(window fyne.Window) fyne.CanvasObject {
 
 	listWrapper := container.NewBorder(exportButtonContainer, nil, nil, nil, listContainer)
 
-	return container.NewBorder(header, footer, nil, nil, listWrapper)
+	return layouts.BaseLayout(window, "Weekly Report", listWrapper)
 }
 
 func ExportWeeklyCSVReport(window fyne.Window) {

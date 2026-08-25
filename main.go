@@ -4,9 +4,9 @@ import (
 	"embed"
 	"fmt"
 	"fynance/appTheme"
+	"fynance/pages"
 	router "fynance/routes"
 	"fynance/utils"
-	"fynance/views"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -26,7 +26,7 @@ func initTemplates(window fyne.Window) {
 	// Create the "templates" folder on the user's machine if missing
 	if err := os.MkdirAll(targetFolder, 0755); err != nil {
 		dialog.ShowInformation("Creating Templates Folder",
-			fmt.Sprintf("Failed to create directory: %s"+err.Error()), window)
+			"Failed to create directory: "+err.Error(), window)
 		return
 	}
 
@@ -50,7 +50,7 @@ func initTemplates(window fyne.Window) {
 			err = os.WriteFile(destPath, data, 0644)
 			if err != nil {
 				dialog.ShowInformation("Creating Templates Folder",
-					fmt.Sprintf("Failed to write %s: %v"+err.Error()+destPath), window)
+					"Failed to write %s: %v"+err.Error()+destPath, window)
 			}
 		}
 		return nil
@@ -86,7 +86,7 @@ func main() {
 
 func loadTheme(window fyne.Window) {
 
-	settings, err := views.LoadSettings()
+	settings, err := pages.LoadSettings()
 
 	if err != nil {
 		dialog.ShowInformation("Loading settings", "Error loading settings: "+err.Error(), window)
