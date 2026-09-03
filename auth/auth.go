@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fynance/helpers"
 	"fynance/models"
 	"fynance/utils"
@@ -64,7 +65,7 @@ func Login(username, password string, updateProgress func(progress float64)) (*m
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			updateProgress(0.0) // Reset progress on failure
-			return nil, err
+			return nil, errors.New("User not found")
 		}
 		updateProgress(0.0) // Reset progress on failure
 		return nil, err
@@ -74,7 +75,7 @@ func Login(username, password string, updateProgress func(progress float64)) (*m
 	updateProgress(0.5) // 70% progress
 	if !CheckPasswordHash(password, user.Password) {
 		updateProgress(0.0) // Reset progress on failure
-		return nil, mongo.ErrNoDocuments
+		return nil, errors.New("Wrong Username or Password")
 	}
 
 	// Step 3: Finalize progress on successful login

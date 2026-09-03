@@ -45,10 +45,10 @@ func LoginView(window fyne.Window, showDashboard func()) *fyne.Container {
 			progressDialog.Hide()
 			if err == mongo.ErrNoDocuments {
 				utils.Logger("User not found", "ERROR", window)
-				dialog.ShowInformation("User Login", "User not found", window)
+				dialog.ShowError(err, window)
 			} else {
 				utils.Logger(username+" wrong password/username", "ERROR", window)
-				dialog.ShowInformation("User Login", "Wrong password/username ", window)
+				dialog.ShowError(err, window)
 			}
 		} else {
 			progressDialog.Hide()
