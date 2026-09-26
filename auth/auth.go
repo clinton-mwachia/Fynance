@@ -12,18 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 )
-
-func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(bytes), err
-}
-
-func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
 
 func Register(username, phone, password string) error {
 	if err := helpers.ValidateUsername(username); err != nil {
@@ -38,7 +27,7 @@ func Register(username, phone, password string) error {
 		return err
 	}
 
-	hashedPassword, err := HashPassword(password)
+	hashedPassword, err := helpers.HashPassword(password)
 	if err != nil {
 		return err
 	}
@@ -73,7 +62,7 @@ func Login(username, password string, updateProgress func(progress float64)) (*m
 
 	// Step 2: Update progress for password validation
 	updateProgress(0.5) // 70% progress
-	if !CheckPasswordHash(password, user.Password) {
+	if !helpers.CheckPasswordHash(password, user.Password) {
 		updateProgress(0.0) // Reset progress on failure
 		return nil, errors.New("Wrong Username or Password")
 	}
@@ -87,7 +76,7 @@ func Login(username, password string, updateProgress func(progress float64)) (*m
 func UpdateUserPassword(userID primitive.ObjectID, password string, window fyne.Window) error {
 	collection := utils.GetCollection("users")
 
-	newHashedPassword, err := HashPassword(password)
+	newHashedPassword, err := helpers.HashPassword(password)
 
 	if err != nil {
 		return err

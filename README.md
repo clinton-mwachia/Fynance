@@ -4,7 +4,7 @@
 
 https://github.com/user-attachments/assets/4ad96707-7a43-46ff-86a0-5bd779025e39
 
-> Version: 1.11.9
+> Version: 1.11.12
 >
 > Developed by: Clinton Moshe
 >
