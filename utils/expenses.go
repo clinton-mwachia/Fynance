@@ -2,277 +2,244 @@ package utils
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"fynance/models"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/gorm"
 )
 
-// MonthlyExpense represents the aggregated result
 type MonthlyExpense struct {
 	Month string  `bson:"_id"`
 	Total float64 `bson:"count"`
 }
 
-// AddExpense adds a new Expense to the database.
-func AddExpense(Expense models.Expense, window fyne.Window) error {
-	collection := GetCollection("expenses")
-	_, err := collection.InsertOne(context.TODO(), Expense)
+func AddExpense(expense models.Expense, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	err := db.Create(&expense).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to save Expense:\n%w", err), window)
+	}
 	return err
 }
 
-// GetAllExpenses retrieves all Expenses from the database.
 func GetAllExpenses(window fyne.Window) []models.Expense {
-	collection := GetCollection("expenses")
-	var Expenses []models.Expense
-
-	cursor, err := collection.Find(context.TODO(), bson.M{})
-	if err != nil {
-		dialog.ShowError(err, window)
-		return Expenses
-	}
-	defer cursor.Close(context.TODO())
-
-	if err = cursor.All(context.TODO(), &Expenses); err != nil {
-		dialog.ShowError(err, window)
-	}
-
-	return Expenses
-}
-
-// GetExpenseByID retrieves a single Expense by its ID from the database.
-func GetExpenseByID(id primitive.ObjectID, window fyne.Window) models.Expense {
-	collection := GetCollection("expenses")
-	var Expense models.Expense
-
-	err := collection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&Expense)
-	if err != nil {
-		dialog.ShowError(err, window)
-	}
-
-	return Expense
-}
-
-// UpdateExpense updates an existing Expense in the database.
-func UpdateExpense(Expense models.Expense, window fyne.Window) error {
-	collection := GetCollection("expenses")
-	_, err := collection.UpdateOne(
-		context.TODO(),
-		bson.M{"_id": Expense.ID},
-		bson.M{"$set": Expense},
-	)
-	return err
-}
-
-// DeleteExpense deletes a Expense from the database.
-func DeleteExpense(id primitive.ObjectID, window fyne.Window) error {
-	collection := GetCollection("expenses")
-	_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": id})
-	return err
-}
-
-// GetExpensesPaginated fetches Expenses with pagination from the database
-func GetExpensesPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.Expense {
-	collection := GetCollection("expenses")
-
-	skip := (page - 1) * limit
-	findOptions := options.Find()
-	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(limit))
-
+	db := GetDB()
 	var expenses []models.Expense
 
-	cursor, err := collection.Find(context.TODO(), bson.M{}, findOptions)
-	if err != nil {
-		dialog.ShowError(err, w)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
 		return expenses
 	}
-	defer cursor.Close(context.TODO())
 
-	if err = cursor.All(context.TODO(), &expenses); err != nil {
-		dialog.ShowError(err, w)
-	}
-	// Process todos and update progress
-	count := 0
-	for cursor.Next(context.TODO()) {
-		var expense models.Expense
-		if err := cursor.Decode(&expense); err != nil {
-			dialog.ShowError(err, w)
-			continue
-		}
-		expenses = append(expenses, expense)
-		count++
-
-		// Update progress dynamically
-		if updateProgress != nil {
-			updateProgress(float64(count) / float64(count))
-		}
-	}
-
-	if err := cursor.Err(); err != nil {
-		dialog.ShowError(err, w)
+	err := db.Order("created_at ASC").Find(&expenses).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to load expenses:\n%w", err), window)
 	}
 
 	return expenses
 }
 
-// CountExpenses returns the count count of Expenses for a user
-func CountExpenses(w fyne.Window) int64 {
-	collection := GetCollection("expenses")
-	count, err := collection.CountDocuments(context.TODO(), bson.M{})
+func GetExpenseByID(id uint, window fyne.Window) models.Expense {
+	db := GetDB()
+	var expense models.Expense
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return expense
+	}
+
+	err := db.First(&expense, id).Error
 	if err != nil {
-		dialog.ShowError(err, w)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			dialog.ShowError(fmt.Errorf("expense record with ID %d could not be found", id), window)
+		} else {
+			dialog.ShowError(fmt.Errorf("failed to fetch expense payload:\n%w", err), window)
+		}
+	}
+
+	return expense
+}
+
+func UpdateExpense(expense models.Expense, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	err := db.Save(&expense).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to update expense record:\n%w", err), window)
+	}
+	return err
+}
+
+func DeleteExpense(id uint, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	var expense models.Expense
+	err := db.First(&expense, id).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("cannot delete: record not found\n%w", err), window)
+		return err
+	}
+
+	return db.Delete(&expense).Error
+}
+
+func GetExpensesPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.Expense {
+	db := GetDB()
+	var expenses []models.Expense
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return expenses
+	}
+
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	if updateProgress != nil {
+		updateProgress(0.2)
+	}
+
+	err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&expenses).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("expenses pagination query failure:\n%w", err), w)
+		if updateProgress != nil {
+			updateProgress(0.0)
+		}
+		return expenses
+	}
+
+	if updateProgress != nil {
+		updateProgress(1.0)
+	}
+
+	return expenses
+}
+
+func CountExpenses(w fyne.Window) int64 {
+	db := GetDB()
+	var count int64
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
+	}
+
+	err := db.Model(&models.Expense{}).Count(&count).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to count expenses:\n%w", err), w)
 	}
 	return count
 }
 
-// search Expenses by quering the db
 func SearchExpenses(searchText string, window fyne.Window) []models.Expense {
-	collection := GetCollection("expenses")
+	db := GetDB()
+	var results []models.Expense
 
-	// Create a case-insensitive regex pattern for the search
-	searchPattern := bson.M{
-		"$regex":   searchText,
-		"$options": "i", // Case-insensitive
-	}
-
-	filter := bson.M{
-		"$or": []bson.M{
-			{"category": searchPattern},
-			{"month": searchPattern},
-		},
-	}
-
-	cursor, err := collection.Find(context.TODO(), filter)
-	if err != nil {
-		dialog.ShowError(err, window)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
 		return nil
 	}
-	defer cursor.Close(context.TODO())
 
-	var results []models.Expense
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		dialog.ShowError(err, window)
+	queryPattern := "%" + searchText + "%"
+	err := db.Where("category LIKE ?", queryPattern).Find(&results).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("expenses search execution failure:\n%w", err), window)
 		return nil
 	}
 
 	return results
-
 }
 
-// count expense by month in current year
-func SumExpenseByMonth(month string) (MonthlyExpense, error) {
-	collection := GetCollection("expenses")
+func SumExpenseByMonth(month string, window fyne.Window) (MonthlyExpense, error) {
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return MonthlyExpense{}, errors.New("database connection not initialized")
+	}
 
-	// Get current year
 	currentYear := time.Now().Format("2006")
 
-	// MongoDB aggregation pipeline
-	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: bson.D{{Key: "year", Value: currentYear}, {Key: "month", Value: month}}}}, // Filter by year and month
-		{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$month"},
-			{Key: "count", Value: bson.D{{Key: "$sum", Value: "$amount"}}},
-		}}},
-	}
-
-	ctx := context.Background()
-	cursor, err := collection.Aggregate(ctx, pipeline)
-	if err != nil {
-		return MonthlyExpense{}, err
-	}
-	defer cursor.Close(ctx)
-
-	// Default result (if no expense is found)
 	result := MonthlyExpense{
 		Month: month,
 		Total: 0,
 	}
 
-	// Parse result if data exists
-	if cursor.Next(ctx) {
-		if err := cursor.Decode(&result); err != nil {
-			return MonthlyExpense{}, err
-		}
+	err := db.Table("expenses").
+		Where("year = ? AND month = ?", currentYear, month).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&result.Total).
+		Error
+
+	if err != nil {
+		return MonthlyExpense{}, err
 	}
 
 	return result, nil
 }
 
-// Returns the count expenses amount for that year
 func TotalExpenses(w fyne.Window) float64 {
-	collection := GetCollection("expenses")
-
-	// get current year
-	currentYear := time.Now().Format("2006")
-
-	// Filter by the "year" field
-	filter := bson.M{
-		"year": currentYear,
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
 	}
 
-	cursor, err := collection.Find(context.TODO(), filter)
+	currentYear := time.Now().Format("2006")
+
+	var total float64
+
+	err := db.Table("expenses").
+		Where("year = ?", currentYear).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&total).
+		Error
+
 	if err != nil {
 		dialog.ShowError(err, w)
 		return 0
 	}
-	defer cursor.Close(context.TODO())
 
-	var count float64
-	for cursor.Next(context.TODO()) {
-		var expense models.Expense
-		if err := cursor.Decode(&expense); err != nil {
-			dialog.ShowError(err, w)
-			continue
-		}
-		count += expense.Amount
-	}
-
-	if err := cursor.Err(); err != nil {
-		dialog.ShowError(err, w)
-	}
-
-	return count
+	return total
 }
 
 func GetExpenseStats(ctx context.Context) (map[string]float64, error) {
-	collection := GetCollection("expenses")
-
-	pipeline := []bson.M{
-		{
-			"$group": bson.M{
-				"_id":   "$category",
-				"count": bson.M{"$sum": "$amount"},
-			},
-		},
-		{
-			"$sort": bson.M{
-				"count": -1, // sort by count descending
-			},
-		},
-		{
-			"$limit": 5, // return only top 5 categories
-		},
+	db := GetDB()
+	if db == nil {
+		return nil, errors.New("database connection not initialized")
 	}
-
-	cursor, err := collection.Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
 
 	var results []struct {
-		Category string  `bson:"_id"`
-		Count    float64 `bson:"count"`
+		Category string  `gorm:"column:category"`
+		Count    float64 `gorm:"column:count"`
 	}
 
-	if err = cursor.All(ctx, &results); err != nil {
+	err := db.WithContext(ctx).
+		Table("expenses").
+		Select("category, SUM(amount) as count").
+		Group("category").
+		Order("count DESC").
+		Limit(5).
+		Scan(&results).
+		Error
+
+	if err != nil {
 		return nil, err
 	}
 
@@ -284,37 +251,53 @@ func GetExpenseStats(ctx context.Context) (map[string]float64, error) {
 	return stats, nil
 }
 
-// BulkInsertExpenses inserts multiple expenses into the database safely.
 func BulkInsertExpenses(expenses []models.Expense, window fyne.Window, progressBar *widget.ProgressBar) {
-	collection := GetCollection("expenses")
-	var docs []any
-	totalExpenses := len(expenses)
-	progress := 0
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return
+	}
 
-	for i, expense := range expenses {
-		parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
+	totalExpenses := len(expenses)
+	if totalExpenses == 0 {
+		progressBar.SetValue(0)
+		dialog.ShowInformation("Success", "No expenses to add.", window)
+		return
+	}
+
+	go func() {
+		now := time.Now()
+		batchSize := 100
+
+		err := db.Transaction(func(tx *gorm.DB) error {
+			for i := 0; i < totalExpenses; i += batchSize {
+				end := i + batchSize
+				if end > totalExpenses {
+					end = totalExpenses
+				}
+
+				batch := expenses[i:end]
+
+				for j := range batch {
+					batch[j].CreatedAt = now
+					batch[j].UpdatedAt = now
+				}
+
+				if err := tx.Create(&batch).Error; err != nil {
+					return err
+				}
+
+				progress := end
+				progressBar.SetValue(float64(progress) / float64(totalExpenses))
+			}
+			return nil
+		})
+
 		if err != nil {
 			dialog.ShowError(err, window)
 			return
 		}
-		expense.CreatedAt = parsedTime
-		expense.UpdatedAt = parsedTime
-		docs = append(docs, expense)
 
-		// Update progress bar for each expense processed
-		progress = i + 1
-		progressBar.SetValue(float64(progress) / float64(totalExpenses))
-
-		// Flush the documents in smaller batches
-		if len(docs) == 100 || i == totalExpenses-1 {
-			_, err := collection.InsertMany(context.TODO(), docs)
-			if err != nil {
-				dialog.ShowError(err, window)
-				return
-			}
-			docs = nil // Reset docs slice for next batch
-		}
-	}
-
-	dialog.ShowInformation("Success", "Expenses added successfully!", window)
+		dialog.ShowInformation("Success", "Expenses added successfully!", window)
+	}()
 }

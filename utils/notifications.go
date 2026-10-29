@@ -1,7 +1,8 @@
 package utils
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"fynance/models"
 	"os"
 	"time"
@@ -11,41 +12,47 @@ import (
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/wav"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// AddNotification adds a new notification to the database
-func AddNotification(notification models.Notification, window fyne.Window) {
-	collection := GetCollection("notifications")
+func AddNotification(notification models.Notification, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
 
-	notification.ID = primitive.NewObjectID() // Assign a new ObjectID
-	notification.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
+	err := db.Create(&notification).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to save notification:\n%w", err), window)
+	}
+	return err
+}
 
-	_, err := collection.InsertOne(context.TODO(), notification)
+func ClearNotifications(userID uint, window fyne.Window) {
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return
+	}
+
+	err := db.Where("user_id = ?", userID).Delete(&models.Notification{}).Error
 	if err != nil {
 		dialog.ShowError(err, window)
 	}
 }
 
-// ClearNotifications clears all notifications for a user
-func ClearNotifications(userID primitive.ObjectID, window fyne.Window) {
-	collection := GetCollection("notifications")
-	filter := bson.M{"user_id": userID}
-
-	_, err := collection.DeleteMany(context.TODO(), filter)
-	if err != nil {
-		dialog.ShowError(err, window)
+func GetUnreadNotificationsCount(userID uint, window fyne.Window) int {
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return 0
 	}
-}
 
-// GetUnreadNotificationsCount returns the count of unread notifications for a user
-func GetUnreadNotificationsCount(userID primitive.ObjectID, window fyne.Window) int {
-	collection := GetCollection("notifications")
-	filter := bson.M{"user_id": userID, "is_read": false}
+	var count int64
+	err := db.Model(&models.Notification{}).
+		Where("user_id = ? AND is_read = ?", userID, false).
+		Count(&count).
+		Error
 
-	count, err := collection.CountDocuments(context.TODO(), filter)
 	if err != nil {
 		dialog.ShowError(err, window)
 		return 0
@@ -54,52 +61,47 @@ func GetUnreadNotificationsCount(userID primitive.ObjectID, window fyne.Window) 
 	return int(count)
 }
 
-// FetchNotifications retrieves all notifications for a user
-func FetchNotifications(userID primitive.ObjectID, window fyne.Window) []models.Notification {
-	collection := GetCollection("notifications")
-	filter := bson.M{"user_id": userID}
+func FetchNotifications(userID uint, window fyne.Window) []models.Notification {
+	db := GetDB()
+	var notifications []models.Notification
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return nil
+	}
 
-	findOptions := options.Find()
-	findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
-	cur, err := collection.Find(context.TODO(), filter, findOptions)
+	err := db.Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&notifications).
+		Error
+
 	if err != nil {
 		dialog.ShowError(err, window)
 		return nil
-	}
-	defer cur.Close(context.TODO())
-
-	var notifications []models.Notification
-	for cur.Next(context.TODO()) {
-		var notif models.Notification
-		err := cur.Decode(&notif)
-		if err != nil {
-			dialog.ShowError(err, window)
-			continue
-		}
-		notifications = append(notifications, notif)
 	}
 
 	return notifications
 }
 
-// MarkNotificationsAsRead marks all notifications for a user as read
-func MarkNotificationsAsRead(userID primitive.ObjectID, window fyne.Window) {
-	collection := GetCollection("notifications")
-	filter := bson.M{"user_id": userID, "is_read": false}
-	update := bson.M{"$set": bson.M{"is_read": true}}
+func MarkNotificationsAsRead(userID uint, window fyne.Window) {
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return
+	}
 
-	_, err := collection.UpdateMany(context.TODO(), filter, update)
+	err := db.Model(&models.Notification{}).
+		Where("user_id = ? AND is_read = ?", userID, false).
+		Update("is_read", true).
+		Error
+
 	if err != nil {
 		dialog.ShowError(err, window)
 	}
 }
 
-// PlayNotificationSound plays a notification sound in WAV format
 func PlayNotificationSound(window fyne.Window) {
-	// Relative path for flexibility
 	filePath := "assets/confirmation-tone.wav"
 
-	// Open the sound file
 	file, err := os.Open(filePath)
 	if err != nil {
 		dialog.ShowError(err, window)
@@ -107,7 +109,6 @@ func PlayNotificationSound(window fyne.Window) {
 	}
 	defer file.Close()
 
-	// Decode the WAV file
 	streamer, format, err := wav.Decode(file)
 	if err != nil {
 		dialog.ShowError(err, window)
@@ -115,18 +116,16 @@ func PlayNotificationSound(window fyne.Window) {
 	}
 	defer streamer.Close()
 
-	// Initialize the speaker
 	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
 	if err != nil {
 		dialog.ShowError(err, window)
 		return
 	}
 
-	// Play the sound and wait until it finishes
-	done := make(chan bool) // Channel to wait for playback completion
+	done := make(chan bool)
 	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
 		done <- true
 	})))
 
-	<-done // Block until the sound finishes playing
+	<-done
 }

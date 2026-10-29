@@ -1,71 +1,148 @@
 package utils
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"fynance/models"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"gorm.io/gorm"
 )
 
-// GetAllUsers retrieves all users from the database.
 func GetAllUsers(window fyne.Window) []models.User {
-	collection := GetCollection("users")
+	db := GetDB()
 	var users []models.User
 
-	cursor, err := collection.Find(context.TODO(), bson.M{})
-	if err != nil {
-		dialog.ShowError(err, window)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
 		return users
 	}
-	defer cursor.Close(context.TODO())
 
-	if err = cursor.All(context.TODO(), &users); err != nil {
-		dialog.ShowError(err, window)
+	err := db.Order("username ASC").Find(&users).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to load records:\n%w", err), window)
 	}
 
 	return users
 }
 
-// GetUserByID retrieves a single user by its ID from the database.
-func GetUserByID(id primitive.ObjectID, window fyne.Window) models.User {
-	collection := GetCollection("users")
+func GetUserByID(id uint, window fyne.Window) models.User {
+	db := GetDB()
 	var user models.User
 
-	err := collection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return user
+	}
+
+	err := db.First(&user, id).Error
 	if err != nil {
-		dialog.ShowError(err, window)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			dialog.ShowError(fmt.Errorf("user record with ID %d could not be found", id), window)
+		} else {
+			dialog.ShowError(fmt.Errorf("failed to fetch user payload:\n%w", err), window)
+		}
 	}
 
 	return user
 }
 
-// UpdateUser updates an existing user in the database.
 func UpdateUser(user models.User, window fyne.Window) error {
-	collection := GetCollection("users")
-	_, err := collection.UpdateOne(
-		context.TODO(),
-		bson.M{"_id": user.ID},
-		bson.M{"$set": user},
-	)
-	return err
-}
-
-// DeleteUser deletes a user from the database.
-func DeleteUser(id primitive.ObjectID, window fyne.Window) error {
-	collection := GetCollection("users")
-	// Retrieve the user before deleting
-	var user models.User
-	err := collection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
-	if err != nil {
-		dialog.ShowError(err, window)
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
 	}
 
-	// Delete the user from the database
-	_, err = collection.DeleteOne(context.TODO(), bson.M{"_id": id})
+	return db.Save(&user).Error
+}
 
-	return err
+func DeleteUser(id uint, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
 
+	var user models.User
+	err := db.First(&user, id).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("cannot delete: record not found\n%w", err), window)
+		return err
+	}
+
+	return db.Delete(&user).Error
+}
+
+func GetUsersPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.User {
+	db := GetDB()
+	var users []models.User
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return users
+	}
+
+	if page < 1 {
+		page = 1
+	}
+
+	offset := (page - 1) * limit
+
+	if updateProgress != nil {
+		updateProgress(0.2)
+	}
+
+	err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&users).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("pagination query failure:\n%w", err), w)
+		if updateProgress != nil {
+			updateProgress(0.0)
+		}
+		return users
+	}
+
+	if updateProgress != nil {
+		updateProgress(1.0)
+	}
+
+	return users
+}
+
+func CountUsers(w fyne.Window) int64 {
+	db := GetDB()
+	var count int64
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
+	}
+
+	err := db.Model(&models.User{}).Count(&count).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to count records:\n%w", err), w)
+	}
+
+	return count
+}
+
+func SearchUsers(searchText string, window fyne.Window) []models.User {
+	db := GetDB()
+	var results []models.User
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return nil
+	}
+
+	queryPattern := "%" + searchText + "%"
+
+	err := db.Where("fullname LIKE ? OR username LIKE ? OR id_number LIKE ? OR phone LIKE ?",
+		queryPattern, queryPattern, queryPattern, queryPattern).Find(&results).Error
+
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("search tracking processing failure:\n%w", err), window)
+		return nil
+	}
+
+	return results
 }

@@ -2,279 +2,205 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fynance/models"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/gorm"
 )
 
-// MonthlyIncome represents the aggregated result
 type MonthlyIncome struct {
 	Month string  `bson:"_id"`
-	Total float64 `bson:"total"`
+	Total float64 `bson:"count"`
 }
 
-// AddIncome adds a new Income to the database.
-func AddIncome(Income models.Income, window fyne.Window) error {
-	collection := GetCollection("income")
-	_, err := collection.InsertOne(context.TODO(), Income)
-	return err
+func AddIncome(income models.Income, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+	return db.Create(&income).Error
 }
 
-// GetAllIncomes retrieves all Incomes from the database.
 func GetAllIncomes(window fyne.Window) []models.Income {
-	collection := GetCollection("income")
-	var Incomes []models.Income
-
-	cursor, err := collection.Find(context.TODO(), bson.M{})
-	if err != nil {
-		dialog.ShowError(err, window)
-		return Incomes
-	}
-	defer cursor.Close(context.TODO())
-
-	if err = cursor.All(context.TODO(), &Incomes); err != nil {
-		dialog.ShowError(err, window)
-	}
-
-	return Incomes
-}
-
-// GetIncomeByID retrieves a single Income by its ID from the database.
-func GetIncomeByID(id primitive.ObjectID, window fyne.Window) models.Income {
-	collection := GetCollection("income")
-	var Income models.Income
-
-	err := collection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&Income)
-	if err != nil {
-		dialog.ShowError(err, window)
-	}
-
-	return Income
-}
-
-// UpdateIncome updates an existing Income in the database.
-func UpdateIncome(Income models.Income, window fyne.Window) error {
-	collection := GetCollection("income")
-	_, err := collection.UpdateOne(
-		context.TODO(),
-		bson.M{"_id": Income.ID},
-		bson.M{"$set": Income},
-	)
-	return err
-}
-
-// DeleteIncome deletes a Income from the database.
-func DeleteIncome(id primitive.ObjectID, window fyne.Window) error {
-	collection := GetCollection("income")
-	_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": id})
-	return err
-}
-
-// GetIncomesPaginated fetches Incomes with pagination from the database
-func GetIncomesPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.Income {
-	collection := GetCollection("income")
-
-	skip := (page - 1) * limit
-	findOptions := options.Find()
-	findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
-	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(limit))
-
+	db := GetDB()
 	var incomes []models.Income
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return incomes
+	}
 
-	cursor, err := collection.Find(context.TODO(), bson.M{}, findOptions)
+	if err := db.Find(&incomes).Error; err != nil {
+		dialog.ShowError(err, window)
+	}
+	return incomes
+}
+
+func GetIncomeByID(id uint, window fyne.Window) models.Income {
+	db := GetDB()
+	var income models.Income
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return income
+	}
+
+	if err := db.First(&income, id).Error; err != nil {
+		dialog.ShowError(err, window)
+	}
+	return income
+}
+
+func UpdateIncome(income models.Income, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	return db.Save(&income).Error
+}
+
+func DeleteIncome(id uint, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+	return db.Delete(&models.Income{}, id).Error
+}
+
+func GetIncomesPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.Income {
+	db := GetDB()
+	var incomes []models.Income
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return incomes
+	}
+
+	offset := (page - 1) * limit
+
+	err := db.Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&incomes).
+		Error
+
 	if err != nil {
 		dialog.ShowError(err, w)
 		return incomes
 	}
-	defer cursor.Close(context.TODO())
 
-	if err = cursor.All(context.TODO(), &incomes); err != nil {
-		dialog.ShowError(err, w)
-	}
-	// Process incomes and update progress
-	count := 0
-	for cursor.Next(context.TODO()) {
-		var income models.Income
-		if err := cursor.Decode(&income); err != nil {
-			dialog.ShowError(err, w)
-			continue
-		}
-		incomes = append(incomes, income)
-		count++
-
-		// Update progress dynamically
-		if updateProgress != nil {
-			updateProgress(float64(count) / float64(count))
-		}
-	}
-
-	if err := cursor.Err(); err != nil {
-		dialog.ShowError(err, w)
+	if updateProgress != nil && len(incomes) > 0 {
+		updateProgress(1.0)
 	}
 
 	return incomes
 }
 
-// CountIncomes returns the total count of Incomes for a user
 func CountIncomes(w fyne.Window) int64 {
-	collection := GetCollection("income")
-	count, err := collection.CountDocuments(context.TODO(), bson.M{})
-	if err != nil {
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
+	}
+
+	var count int64
+	if err := db.Model(&models.Income{}).Count(&count).Error; err != nil {
 		dialog.ShowError(err, w)
 	}
 	return count
 }
 
-// search Incomes by quering the db
 func SearchIncomes(searchText string, window fyne.Window) []models.Income {
-	collection := GetCollection("income")
-
-	// Create a case-insensitive regex pattern for the search
-	searchPattern := bson.M{
-		"$regex":   searchText,
-		"$options": "i", // Case-insensitive
+	db := GetDB()
+	var results []models.Income
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return nil
 	}
 
-	filter := bson.M{
-		"$or": []bson.M{
-			{"category": searchPattern},
-			{"month": searchPattern},
-		},
-	}
+	queryParam := "%" + searchText + "%"
 
-	cursor, err := collection.Find(context.TODO(), filter)
+	err := db.Where("category LIKE ? OR month LIKE ?", queryParam, queryParam).
+		Find(&results).
+		Error
+
 	if err != nil {
 		dialog.ShowError(err, window)
 		return nil
 	}
-	defer cursor.Close(context.TODO())
-
-	var results []models.Income
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		dialog.ShowError(err, window)
-		return nil
-	}
-
 	return results
-
 }
 
-// total income by month in current year
 func SumIncomeByMonth(month string) (MonthlyIncome, error) {
-	collection := GetCollection("income")
+	db := GetDB()
+	if db == nil {
+		return MonthlyIncome{}, errors.New("database connection not initialized")
+	}
 
-	// Get current year
 	currentYear := time.Now().Format("2006")
-
-	// MongoDB aggregation pipeline
-	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: bson.D{{Key: "year", Value: currentYear}, {Key: "month", Value: month}}}}, // Filter by year and month
-		{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$month"},
-			{Key: "total", Value: bson.D{{Key: "$sum", Value: "$amount"}}},
-		}}},
-	}
-
-	ctx := context.Background()
-	cursor, err := collection.Aggregate(ctx, pipeline)
-	if err != nil {
-		return MonthlyIncome{}, err
-	}
-	defer cursor.Close(ctx)
-
-	// Default result (if no income is found)
 	result := MonthlyIncome{
 		Month: month,
 		Total: 0,
 	}
 
-	// Parse result if data exists
-	if cursor.Next(ctx) {
-		if err := cursor.Decode(&result); err != nil {
-			return MonthlyIncome{}, err
-		}
-	}
+	err := db.Table("incomes").
+		Where("year = ? AND month = ?", currentYear, month).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&result.Total).
+		Error
 
+	if err != nil {
+		return MonthlyIncome{}, err
+	}
 	return result, nil
 }
 
-// Returns the total income amount for that year
 func TotalIncome(w fyne.Window) float64 {
-	collection := GetCollection("income")
-
-	// get current year
-	currentYear := time.Now().Format("2006")
-
-	// Filter by the "year" field
-	filter := bson.M{
-		"year": currentYear,
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
 	}
 
-	cursor, err := collection.Find(context.TODO(), filter)
+	currentYear := time.Now().Format("2006")
+	var total float64
+
+	err := db.Table("incomes").
+		Where("year = ?", currentYear).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&total).
+		Error
+
 	if err != nil {
 		dialog.ShowError(err, w)
 		return 0
 	}
-	defer cursor.Close(context.TODO())
-
-	var total float64
-	for cursor.Next(context.TODO()) {
-		var income models.Income
-		if err := cursor.Decode(&income); err != nil {
-			dialog.ShowError(err, w)
-			continue
-		}
-		total += income.Amount
-	}
-
-	if err := cursor.Err(); err != nil {
-		dialog.ShowError(err, w)
-	}
-
 	return total
 }
 
-// total income by category limited to 5
 func GetIncomeStats(ctx context.Context) (map[string]float64, error) {
-	collection := GetCollection("income")
-
-	pipeline := []bson.M{
-		{
-			"$group": bson.M{
-				"_id":   "$category",
-				"count": bson.M{"$sum": "$amount"},
-			},
-		},
-		{
-			"$sort": bson.M{
-				"count": -1, // sort by count descending
-			},
-		},
-		{
-			"$limit": 5, // return only top 5 categories
-		},
+	db := GetDB()
+	if db == nil {
+		return nil, errors.New("database connection not initialized")
 	}
-
-	cursor, err := collection.Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
 
 	var results []struct {
-		Category string  `bson:"_id"`
-		Count    float64 `bson:"count"`
+		Category string  `gorm:"column:category"`
+		Count    float64 `gorm:"column:count"`
 	}
 
-	if err = cursor.All(ctx, &results); err != nil {
+	err := db.WithContext(ctx).
+		Table("incomes").
+		Select("category, SUM(amount) as count").
+		Group("category").
+		Order("count DESC").
+		Limit(5).
+		Scan(&results).
+		Error
+
+	if err != nil {
 		return nil, err
 	}
 
@@ -282,41 +208,54 @@ func GetIncomeStats(ctx context.Context) (map[string]float64, error) {
 	for _, result := range results {
 		stats[result.Category] = result.Count
 	}
-
 	return stats, nil
 }
 
-// BulkInsertIncome inserts multiple incomes into the database safely.
 func BulkInsertIncome(incomes []models.Income, window fyne.Window, progressBar *widget.ProgressBar) {
-	collection := GetCollection("income")
-	var docs []any
-	totalIncomes := len(incomes)
-	progress := 0
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return
+	}
 
-	for i, income := range incomes {
-		parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
+	totalIncomes := len(incomes)
+	if totalIncomes == 0 {
+		progressBar.SetValue(0)
+		dialog.ShowInformation("Success", "No incomes to add.", window)
+		return
+	}
+
+	go func() {
+		now := time.Now()
+		batchSize := 100
+
+		err := db.Transaction(func(tx *gorm.DB) error {
+			for i := 0; i < totalIncomes; i += batchSize {
+				end := i + batchSize
+				if end > totalIncomes {
+					end = totalIncomes
+				}
+
+				batch := incomes[i:end]
+				for j := range batch {
+					batch[j].CreatedAt = now
+					batch[j].UpdatedAt = now
+				}
+
+				if err := tx.Table("incomes").Create(&batch).Error; err != nil {
+					return err
+				}
+
+				progressBar.SetValue(float64(end) / float64(totalIncomes))
+			}
+			return nil
+		})
+
 		if err != nil {
 			dialog.ShowError(err, window)
 			return
 		}
-		income.CreatedAt = parsedTime
-		income.UpdatedAt = parsedTime
-		docs = append(docs, income)
 
-		// Update progress bar for each income processed
-		progress = i + 1
-		progressBar.SetValue(float64(progress) / float64(totalIncomes))
-
-		// Flush the documents in smaller batches
-		if len(docs) == 100 || i == totalIncomes-1 {
-			_, err := collection.InsertMany(context.TODO(), docs)
-			if err != nil {
-				dialog.ShowError(err, window)
-				return
-			}
-			docs = nil // Reset docs slice for next batch
-		}
-	}
-
-	dialog.ShowInformation("Success", "Incomes added successfully!", window)
+		dialog.ShowInformation("Success", "Incomes added successfully!", window)
+	}()
 }

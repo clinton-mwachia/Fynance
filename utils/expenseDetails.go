@@ -1,154 +1,160 @@
 package utils
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"fynance/models"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/gorm"
 )
 
-// AddDetail adds a new Detail to the database.
 func AddExpenseDetail(ExpenseDetail models.ExpenseDetail, window fyne.Window) error {
-	collection := GetCollection("expense_details")
-	_, err := collection.InsertOne(context.TODO(), ExpenseDetail)
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	err := db.Create(&ExpenseDetail).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to save Expense Detail:\n%w", err), window)
+	}
 	return err
 }
 
-// GetAllExpenseDetails retrieves all ExpenseDetails from the database.
 func GetAllExpenseDetails(window fyne.Window) []models.ExpenseDetail {
-	collection := GetCollection("expense_details")
-	var ExpenseDetails []models.ExpenseDetail
+	db := GetDB()
+	var expenseDetails []models.ExpenseDetail
 
-	cursor, err := collection.Find(context.TODO(), bson.M{})
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return expenseDetails
+	}
+
+	err := db.Order("expense_category ASC").Find(&expenseDetails).Error
 	if err != nil {
-		dialog.ShowError(err, window)
-		return ExpenseDetails
-	}
-	defer cursor.Close(context.TODO())
-
-	if err = cursor.All(context.TODO(), &ExpenseDetails); err != nil {
-		dialog.ShowError(err, window)
+		dialog.ShowError(fmt.Errorf("failed to load expense details:\n%w", err), window)
 	}
 
-	return ExpenseDetails
+	return expenseDetails
 }
 
-// GetExpenseDetailByID retrieves a single ExpenseDetail by its ID from the database.
-func GetExpenseDetailByID(id primitive.ObjectID, window fyne.Window) models.ExpenseDetail {
-	collection := GetCollection("expense_details")
-	var ExpenseDetail models.ExpenseDetail
+func GetExpenseDetailByID(id uint, window fyne.Window) models.ExpenseDetail {
+	db := GetDB()
+	var expenseDetail models.ExpenseDetail
 
-	err := collection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&ExpenseDetail)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return expenseDetail
+	}
+
+	err := db.First(&expenseDetail, id).Error
 	if err != nil {
-		dialog.ShowError(err, window)
-	}
-
-	return ExpenseDetail
-}
-
-// UpdateExpenseDetail updates an existing ExpenseDetail in the database.
-func UpdateExpenseDetail(ExpenseDetail models.ExpenseDetail, window fyne.Window) error {
-	collection := GetCollection("expense_details")
-	_, err := collection.UpdateOne(
-		context.TODO(),
-		bson.M{"_id": ExpenseDetail.ID},
-		bson.M{"$set": ExpenseDetail},
-	)
-	return err
-}
-
-// DeleteExpenseDetail deletes a ExpenseDetail from the database.
-func DeleteExpenseDetail(id primitive.ObjectID, window fyne.Window) error {
-	collection := GetCollection("expense_details")
-	_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": id})
-	return err
-}
-
-// GetExpenseDetailsPaginated fetches ExpenseDetails with pagination from the database
-func GetExpenseDetailsPaginated(page, limit int, w fyne.Window) []models.ExpenseDetail {
-	collection := GetCollection("expense_details")
-
-	skip := (page - 1) * limit
-	findOptions := options.Find()
-	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(limit))
-	findOptions.SetSort(bson.D{{Key: "expense_category", Value: 1}})
-
-	var expense_details []models.ExpenseDetail
-
-	cursor, err := collection.Find(context.TODO(), bson.M{}, findOptions)
-	if err != nil {
-		dialog.ShowError(err, w)
-		return expense_details
-	}
-	defer cursor.Close(context.TODO())
-
-	if err = cursor.All(context.TODO(), &expense_details); err != nil {
-		dialog.ShowError(err, w)
-	}
-	// Process Details and update progress
-	count := 0
-	for cursor.Next(context.TODO()) {
-		var expense_detail models.ExpenseDetail
-		if err := cursor.Decode(&expense_detail); err != nil {
-			dialog.ShowError(err, w)
-			continue
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			dialog.ShowError(fmt.Errorf("expense Detail record with ID %d could not be found", id), window)
+		} else {
+			dialog.ShowError(fmt.Errorf("failed to fetch expense Detail payload:\n%w", err), window)
 		}
-		expense_details = append(expense_details, expense_detail)
-		count++
-
 	}
 
-	if err := cursor.Err(); err != nil {
-		dialog.ShowError(err, w)
-	}
-
-	return expense_details
+	return expenseDetail
 }
 
-// CountExpenseDetails returns the total count of ExpenseDetails for a user
-func CountExpenseDetails(w fyne.Window) int64 {
-	collection := GetCollection("expense_details")
-	count, err := collection.CountDocuments(context.TODO(), bson.M{})
+func UpdateExpenseDetail(expenseDetail models.ExpenseDetail, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	err := db.Save(&expenseDetail).Error
 	if err != nil {
-		dialog.ShowError(err, w)
+		dialog.ShowError(fmt.Errorf("failed to update expense detail record:\n%w", err), window)
+	}
+	return err
+}
+
+func DeleteExpenseDetail(id uint, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	var expenseDetail models.ExpenseDetail
+	err := db.First(&expenseDetail, id).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("cannot delete: record not found\n%w", err), window)
+		return err
+	}
+
+	return db.Delete(&expenseDetail).Error
+}
+
+func GetExpenseDetailsPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.ExpenseDetail {
+	db := GetDB()
+	var expensesDetails []models.ExpenseDetail
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return expensesDetails
+	}
+
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	if updateProgress != nil {
+		updateProgress(0.2)
+	}
+
+	err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&expensesDetails).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("expense details pagination query failure:\n%w", err), w)
+		if updateProgress != nil {
+			updateProgress(0.0)
+		}
+		return expensesDetails
+	}
+
+	if updateProgress != nil {
+		updateProgress(1.0)
+	}
+
+	return expensesDetails
+}
+
+func CountExpenseDetails(w fyne.Window) int64 {
+	db := GetDB()
+	var count int64
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
+	}
+
+	err := db.Model(&models.ExpenseDetail{}).Count(&count).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to count expense details:\n%w", err), w)
 	}
 	return count
 }
 
-// search ExpenseDetails by quering the db
 func SearchExpenseDetails(searchText string, window fyne.Window) []models.ExpenseDetail {
-	collection := GetCollection("expense_details")
+	db := GetDB()
+	var results []models.ExpenseDetail
 
-	// Create a case-insensitive regex pattern for the search
-	searchPattern := bson.M{
-		"$regex":   searchText,
-		"$options": "i", // Case-insensitive
-	}
-
-	filter := bson.M{
-		"$or": []bson.M{
-			{"expense_category": searchPattern},
-		},
-	}
-
-	cursor, err := collection.Find(context.TODO(), filter)
-	if err != nil {
-		dialog.ShowError(err, window)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
 		return nil
 	}
-	defer cursor.Close(context.TODO())
 
-	var results []models.ExpenseDetail
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		dialog.ShowError(err, window)
+	queryPattern := "%" + searchText + "%"
+	err := db.Where("expense_category LIKE ?", queryPattern).Find(&results).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("expense details search execution failure:\n%w", err), window)
 		return nil
 	}
 
 	return results
-
 }

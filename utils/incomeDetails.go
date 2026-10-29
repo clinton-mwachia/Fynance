@@ -1,154 +1,160 @@
 package utils
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"fynance/models"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/gorm"
 )
 
-// AddDetail adds a new Detail to the database.
-func AddDetail(Detail models.IncomeDetail, window fyne.Window) error {
-	collection := GetCollection("income_details")
-	_, err := collection.InsertOne(context.TODO(), Detail)
+func AddIncomeDetail(incomeDetail models.IncomeDetail, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	err := db.Create(&incomeDetail).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to save Income Detail:\n%w", err), window)
+	}
 	return err
 }
 
-// GetAllDetails retrieves all Details from the database.
-func GetAllDetails(window fyne.Window) []models.IncomeDetail {
-	collection := GetCollection("income_details")
-	var Details []models.IncomeDetail
+func GetAllIncomeDetails(window fyne.Window) []models.IncomeDetail {
+	db := GetDB()
+	var incomeDetails []models.IncomeDetail
 
-	cursor, err := collection.Find(context.TODO(), bson.M{})
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return incomeDetails
+	}
+
+	err := db.Order("income_category ASC").Find(&incomeDetails).Error
 	if err != nil {
-		dialog.ShowError(err, window)
-		return Details
-	}
-	defer cursor.Close(context.TODO())
-
-	if err = cursor.All(context.TODO(), &Details); err != nil {
-		dialog.ShowError(err, window)
+		dialog.ShowError(fmt.Errorf("failed to load income details:\n%w", err), window)
 	}
 
-	return Details
+	return incomeDetails
 }
 
-// GetDetailByID retrieves a single Detail by its ID from the database.
-func GetDetailByID(id primitive.ObjectID, window fyne.Window) models.IncomeDetail {
-	collection := GetCollection("income_details")
-	var Detail models.IncomeDetail
+func GetIncomeDetailByID(id uint, window fyne.Window) models.IncomeDetail {
+	db := GetDB()
+	var incomeDetail models.IncomeDetail
 
-	err := collection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&Detail)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return incomeDetail
+	}
+
+	err := db.First(&incomeDetail, id).Error
 	if err != nil {
-		dialog.ShowError(err, window)
-	}
-
-	return Detail
-}
-
-// UpdateDetail updates an existing Detail in the database.
-func UpdateDetail(Detail models.IncomeDetail, window fyne.Window) error {
-	collection := GetCollection("income_details")
-	_, err := collection.UpdateOne(
-		context.TODO(),
-		bson.M{"_id": Detail.ID},
-		bson.M{"$set": Detail},
-	)
-	return err
-}
-
-// DeleteDetail deletes a Detail from the database.
-func DeleteDetail(id primitive.ObjectID, window fyne.Window) error {
-	collection := GetCollection("income_details")
-	_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": id})
-	return err
-}
-
-// GetDetailsPaginated fetches Details with pagination from the database
-func GetDetailsPaginated(page, limit int, w fyne.Window) []models.IncomeDetail {
-	collection := GetCollection("income_details")
-
-	skip := (page - 1) * limit
-	findOptions := options.Find()
-	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(limit))
-	findOptions.SetSort(bson.D{{Key: "income_category", Value: 1}})
-
-	var income_details []models.IncomeDetail
-
-	cursor, err := collection.Find(context.TODO(), bson.M{}, findOptions)
-	if err != nil {
-		dialog.ShowError(err, w)
-		return income_details
-	}
-	defer cursor.Close(context.TODO())
-
-	if err = cursor.All(context.TODO(), &income_details); err != nil {
-		dialog.ShowError(err, w)
-	}
-	// Process Details and update progress
-	count := 0
-	for cursor.Next(context.TODO()) {
-		var income_detail models.IncomeDetail
-		if err := cursor.Decode(&income_detail); err != nil {
-			dialog.ShowError(err, w)
-			continue
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			dialog.ShowError(fmt.Errorf("income Detail record with ID %d could not be found", id), window)
+		} else {
+			dialog.ShowError(fmt.Errorf("failed to fetch income Detail payload:\n%w", err), window)
 		}
-		income_details = append(income_details, income_detail)
-		count++
-
 	}
 
-	if err := cursor.Err(); err != nil {
-		dialog.ShowError(err, w)
-	}
-
-	return income_details
+	return incomeDetail
 }
 
-// CountDetails returns the total count of Details for a user
-func CountDetails(w fyne.Window) int64 {
-	collection := GetCollection("income_details")
-	count, err := collection.CountDocuments(context.TODO(), bson.M{})
+func UpdateIncomeDetail(incomeDetail models.IncomeDetail, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	err := db.Save(&incomeDetail).Error
 	if err != nil {
-		dialog.ShowError(err, w)
+		dialog.ShowError(fmt.Errorf("failed to update income detail record:\n%w", err), window)
+	}
+	return err
+}
+
+func DeleteIncomeDetail(id uint, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
+	}
+
+	var incomeDetail models.IncomeDetail
+	err := db.First(&incomeDetail, id).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("cannot delete: record not found\n%w", err), window)
+		return err
+	}
+
+	return db.Delete(&incomeDetail).Error
+}
+
+func GetIncomeDetailsPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.IncomeDetail {
+	db := GetDB()
+	var incomesDetails []models.IncomeDetail
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return incomesDetails
+	}
+
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	if updateProgress != nil {
+		updateProgress(0.2)
+	}
+
+	err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&incomesDetails).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("income details pagination query failure:\n%w", err), w)
+		if updateProgress != nil {
+			updateProgress(0.0)
+		}
+		return incomesDetails
+	}
+
+	if updateProgress != nil {
+		updateProgress(1.0)
+	}
+
+	return incomesDetails
+}
+
+func CountIncomeDetails(w fyne.Window) int64 {
+	db := GetDB()
+	var count int64
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
+	}
+
+	err := db.Model(&models.IncomeDetail{}).Count(&count).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to count income details:\n%w", err), w)
 	}
 	return count
 }
 
-// search Details by quering the db
-func SearchDetails(searchText string, window fyne.Window) []models.IncomeDetail {
-	collection := GetCollection("income_details")
+func SearchIncomeDetails(searchText string, window fyne.Window) []models.IncomeDetail {
+	db := GetDB()
+	var results []models.IncomeDetail
 
-	// Create a case-insensitive regex pattern for the search
-	searchPattern := bson.M{
-		"$regex":   searchText,
-		"$options": "i", // Case-insensitive
-	}
-
-	filter := bson.M{
-		"$or": []bson.M{
-			{"income_category": searchPattern},
-		},
-	}
-
-	cursor, err := collection.Find(context.TODO(), filter)
-	if err != nil {
-		dialog.ShowError(err, window)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
 		return nil
 	}
-	defer cursor.Close(context.TODO())
 
-	var results []models.IncomeDetail
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		dialog.ShowError(err, window)
+	queryPattern := "%" + searchText + "%"
+	err := db.Where("income_category LIKE ?", queryPattern).Find(&results).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("income details search execution failure:\n%w", err), window)
 		return nil
 	}
 
 	return results
-
 }

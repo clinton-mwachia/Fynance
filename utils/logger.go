@@ -6,7 +6,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func Logger(details string, status string, window fyne.Window) {
@@ -17,7 +16,6 @@ func Logger(details string, status string, window fyne.Window) {
 		return
 	}
 	myLog := models.Log{
-		ID:        primitive.NewObjectID(),
 		Timestamp: parsedTime,
 		Details:   details,
 		Status:    status,

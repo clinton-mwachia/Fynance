@@ -1,144 +1,164 @@
 package utils
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"fynance/models"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/gorm"
 )
 
-// AddLog adds a new todo to the database.
-func AddLog(log models.Log, window fyne.Window) {
-	collection := GetCollection("logs")
-	_, err := collection.InsertOne(context.TODO(), log)
-	if err != nil {
-		dialog.ShowError(err, window)
+func AddLog(log models.Log, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
 	}
+
+	err := db.Create(&log).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to save Log:\n%w", err), window)
+	}
+	return err
 }
 
-// GetAllLogs retrieves all logs from the database.
 func GetAllLogs(window fyne.Window) []models.Log {
-	collection := GetCollection("logs")
+	db := GetDB()
 	var logs []models.Log
 
-	cursor, err := collection.Find(context.TODO(), bson.M{})
-	if err != nil {
-		dialog.ShowError(err, window)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
 		return logs
 	}
-	defer cursor.Close(context.TODO())
 
-	if err = cursor.All(context.TODO(), &logs); err != nil {
-		dialog.ShowError(err, window)
+	err := db.Order("created_at ASC").Find(&logs).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to load logs:\n%w", err), window)
 	}
 
 	return logs
 }
 
-// GetLogByID retrieves a single log by its ID from the database.
-func GetLogByID(id primitive.ObjectID, window fyne.Window) models.Log {
-	collection := GetCollection("logs")
+func GetLogByID(id uint, window fyne.Window) models.Log {
+	db := GetDB()
 	var log models.Log
 
-	err := collection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&log)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return log
+	}
+
+	err := db.First(&log, id).Error
 	if err != nil {
-		dialog.ShowError(err, window)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			dialog.ShowError(fmt.Errorf("log record with ID %d could not be found", id), window)
+		} else {
+			dialog.ShowError(fmt.Errorf("failed to fetch log payload:\n%w", err), window)
+		}
 	}
 
 	return log
 }
 
-// DeleteLog deletes a log from the database.
-func DeleteLog(id primitive.ObjectID, window fyne.Window) {
-	collection := GetCollection("logs")
-	_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": id})
-	if err != nil {
-		dialog.ShowError(err, window)
-	} else {
-		dialog.ShowInformation("Success", "Log deleted successfully!", window)
+func DeleteLog(id uint, window fyne.Window) error {
+	db := GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
 	}
+
+	var log models.Log
+	err := db.First(&log, id).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("cannot delete log: record not found\n%w", err), window)
+		return err
+	}
+
+	return db.Delete(&log).Error
 }
 
-// DeleteLog deletes a log from the database.
 func DeleteAllLogs(window fyne.Window) {
-	collection := GetCollection("logs")
-	_, err := collection.DeleteMany(context.TODO(), bson.M{})
+	db := GetDB()
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
+		return
+	}
+
+	err := db.Table("logs").Where("1 = 1").Delete(struct{}{}).Error
 	if err != nil {
 		dialog.ShowError(err, window)
-	} else {
-		dialog.ShowInformation("Success", "Log deleted successfully!", window)
+		return
 	}
+
+	dialog.ShowInformation("Success", "Logs deleted successfully!", window)
 }
 
-// GetLogsPaginated fetches todos with pagination from the database
-func GetLogsPaginated(page, limit int, w fyne.Window) []models.Log {
-	collection := GetCollection("logs")
-
-	skip := (page - 1) * limit
-	findOptions := options.Find()
-	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(limit))
-
+func GetLogsPaginated(page, limit int, w fyne.Window, updateProgress func(float64)) []models.Log {
+	db := GetDB()
 	var logs []models.Log
 
-	cursor, err := collection.Find(context.TODO(), bson.M{}, findOptions)
-	if err != nil {
-		dialog.ShowError(err, w)
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
 		return logs
 	}
-	defer cursor.Close(context.TODO())
 
-	if err = cursor.All(context.TODO(), &logs); err != nil {
-		dialog.ShowError(err, w)
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	if updateProgress != nil {
+		updateProgress(0.2)
+	}
+
+	err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&logs).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("logs pagination query failure:\n%w", err), w)
+		if updateProgress != nil {
+			updateProgress(0.0)
+		}
+		return logs
+	}
+
+	if updateProgress != nil {
+		updateProgress(1.0)
 	}
 
 	return logs
 }
 
-// search logs by quering the db
-func SearchLogs(searchText string, window fyne.Window) []models.Log {
-	collection := GetCollection("logs")
+func CountLogs(w fyne.Window) int64 {
+	db := GetDB()
+	var count int64
 
-	// Create a case-insensitive regex pattern for the search
-	searchPattern := bson.M{
-		"$regex":   searchText,
-		"$options": "i", // Case-insensitive
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), w)
+		return 0
 	}
 
-	filter := bson.M{
-		"$or": []bson.M{
-			{"timestamp": searchPattern},
-			{"details": searchPattern},
-		},
-	}
-
-	cursor, err := collection.Find(context.TODO(), filter)
+	err := db.Model(&models.Log{}).Count(&count).Error
 	if err != nil {
-		dialog.ShowError(err, window)
+		dialog.ShowError(fmt.Errorf("failed to count logs:\n%w", err), w)
+	}
+	return count
+}
+
+func SearchLogs(searchText string, window fyne.Window) []models.Log {
+	db := GetDB()
+	var results []models.Log
+
+	if db == nil {
+		dialog.ShowError(errors.New("database connection not initialized"), window)
 		return nil
 	}
-	defer cursor.Close(context.TODO())
 
-	var results []models.Log
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		dialog.ShowError(err, window)
+	queryPattern := "%" + searchText + "%"
+
+	err := db.Where("status LIKE ? OR details LIKE ?", queryPattern, queryPattern).Find(&results).Error
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("logs search execution failure:\n%w", err), window)
 		return nil
 	}
 
 	return results
-
-}
-
-// CountLogs returns the total count of logs
-func CountLogs(w fyne.Window) int64 {
-	collection := GetCollection("logs")
-	count, err := collection.CountDocuments(context.TODO(), bson.M{})
-	if err != nil {
-		dialog.ShowError(err, w)
-	}
-	return count
 }
