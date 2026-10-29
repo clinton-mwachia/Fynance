@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"fynance/appTheme"
+	"fynance/helpers"
 	"fynance/pages"
 	router "fynance/routes"
 	"fynance/utils"
@@ -63,20 +64,18 @@ func initTemplates(window fyne.Window) {
 }
 
 func main() {
+	helpers.Init()
 	application := app.NewWithID("fynance.com")
 	window := application.NewWindow("Fynance")
 
 	initTemplates(window)
-	// connect to DB
-	utils.ConnectDB("mongodb://localhost:27017", window)
 
-	// Load settings
+	utils.ConnectDB(helpers.DBpath, window)
+
 	loadTheme(window)
 
-	// Create router
 	r := router.NewRouter(window)
 
-	// Start with login
 	r.ShowLogin()
 
 	window.Resize(fyne.NewSize(400, 300))
