@@ -24,7 +24,6 @@ func IncomeStatsChart(window fyne.Window) *fyne.Container {
 
 	incomeData := make(map[string]charts.DataPoint)
 
-	// generate colors
 	categoryColors := helpers.GenerateDistinctColors(len(incomeStats))
 	i := 0
 	for category, count := range incomeStats {

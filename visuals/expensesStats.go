@@ -24,7 +24,6 @@ func ExpensesStatsChart(window fyne.Window) *fyne.Container {
 
 	expenseData := make(map[string]charts.DataPoint)
 
-	// generate colors
 	categoryColors := helpers.GenerateDistinctColors(len(expenseStats))
 	i := 0
 	for category, count := range expenseStats {
