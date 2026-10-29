@@ -8,16 +8,15 @@ import (
 func GenerateDistinctColors(n int) []color.RGBA {
 	colors := make([]color.RGBA, n)
 	for i := range n {
-		h := float64(i) / float64(n) // Hue: 0.0 - 1.0
-		s := 0.65                    // Saturation
-		v := 0.95                    // Value (brightness)
+		h := float64(i) / float64(n)
+		s := 0.65
+		v := 0.95
 		r, g, b := HSVtoRGB(h, s, v)
 		colors[i] = color.RGBA{R: r, G: g, B: b, A: 255}
 	}
 	return colors
 }
 
-// HSVtoRGB converts HSV to RGB (values 0-255)
 func HSVtoRGB(h, s, v float64) (r, g, b uint8) {
 	var rf, gf, bf float64
 

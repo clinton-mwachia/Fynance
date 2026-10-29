@@ -24,7 +24,6 @@ func (f *fixedWidthLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 	return fyne.NewSize(f.width, minHeight)
 }
 
-// NewFixedWidthCenter creates a container with a fixed width that is centered.
 func NewFixedWidthCenter(content fyne.CanvasObject, width float32) *fyne.Container {
 	layout := &fixedWidthLayout{width: width}
 	return container.New(layout, content)
