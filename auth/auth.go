@@ -1,94 +1,88 @@
 package auth
 
 import (
-	"context"
 	"errors"
+	"fmt"
 	"fynance/helpers"
 	"fynance/models"
 	"fynance/utils"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"gorm.io/gorm"
 )
 
-func Register(username, phone, password string) error {
-	if err := helpers.ValidateUsername(username); err != nil {
-		return err
+func Register(user *models.User) error {
+	db := utils.GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
 	}
 
-	if err := helpers.ValidatePassword(password); err != nil {
-		return err
+	var existingUser models.User
+	err := db.Where("username = ?", user.Username).First(&existingUser).Error
+	if err == nil {
+		return errors.New("the username is already taken")
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("database verification error: %w", err)
 	}
 
-	if err := helpers.ValidatePhoneNumber(phone); err != nil {
-		return err
-	}
-
-	hashedPassword, err := helpers.HashPassword(password)
+	hashedPassword, err := helpers.HashPassword(user.Password)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to secure password: %w", err)
 	}
 
-	userCollection := utils.GetCollection("users")
-	_, err = userCollection.InsertOne(context.Background(), models.User{
-		ID:       primitive.NewObjectID(), // Generate a new ID for the user
-		Username: username,
-		Phone:    phone,
-		Password: hashedPassword,
-	})
+	user.Password = hashedPassword
 
-	return err
+	err = db.Create(&user).Error
+	if err != nil {
+		return fmt.Errorf("database insertion error: %w", err)
+	}
+
+	return nil
 }
 
-// login user
 func Login(username, password string, updateProgress func(progress float64)) (*models.User, error) {
-	userCollection := utils.GetCollection("users")
+	db := utils.GetDB()
+	if db == nil {
+		return nil, errors.New("database connection not initialized")
+	}
+
 	var user models.User
 
-	// Step 1: Update progress for finding the user in the database
-	updateProgress(0.3) // 30% progress
-	err := userCollection.FindOne(context.Background(), bson.M{"username": username}).Decode(&user)
+	updateProgress(0.1)
+
+	err := db.Where("username = ?", username).First(&user).Error
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			updateProgress(0.0) // Reset progress on failure
+		updateProgress(0.0)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("User not found")
 		}
-		updateProgress(0.0) // Reset progress on failure
-		return nil, err
+		return nil, fmt.Errorf("database lookup error: %w", err)
 	}
 
-	// Step 2: Update progress for password validation
-	updateProgress(0.5) // 70% progress
+	updateProgress(0.5)
+
 	if !helpers.CheckPasswordHash(password, user.Password) {
-		updateProgress(0.0) // Reset progress on failure
-		return nil, errors.New("Wrong Username or Password")
+		updateProgress(0.0)
+		return nil, errors.New("Invalid username or password")
 	}
 
-	// Step 3: Finalize progress on successful login
-	updateProgress(1.0) // 100% progress
+	updateProgress(1.0)
 	return &user, nil
 }
 
-// UpdateUserPassword updates the user's password in the database.
-func UpdateUserPassword(userID primitive.ObjectID, password string, window fyne.Window) error {
-	collection := utils.GetCollection("users")
-
-	newHashedPassword, err := helpers.HashPassword(password)
-
-	if err != nil {
-		return err
+func ResetPassword(userID uint, newPassword string, window fyne.Window) error {
+	db := utils.GetDB()
+	if db == nil {
+		return errors.New("database connection not initialized")
 	}
 
-	// Update the user's password field in the database.
-	_, err = collection.UpdateOne(
-		context.Background(),
-		bson.M{"_id": userID},
-		bson.M{"$set": bson.M{"password": newHashedPassword}},
-	)
+	newHashedPassword, err := helpers.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash new password: %w", err)
+	}
 
+	err = db.Model(&models.User{}).Where("id = ?", userID).Update("password", newHashedPassword).Error
 	if err != nil {
 		dialog.ShowError(err, window)
 		return err
