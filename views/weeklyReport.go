@@ -22,7 +22,6 @@ func WeeklyReport(window fyne.Window) *fyne.Container {
 	var reports []models.Report
 	var noResultsLabel *widget.Label
 
-	// Update visibility of no results label
 	updateNoResultsLabel := func() {
 		if len(reports) == 0 {
 			noResultsLabel.Show()
@@ -33,7 +32,6 @@ func WeeklyReport(window fyne.Window) *fyne.Container {
 		}
 	}
 
-	// Load incomes for the specified page
 	loadReports := func() {
 
 		go func() {
@@ -52,7 +50,6 @@ func WeeklyReport(window fyne.Window) *fyne.Container {
 		updateNoResultsLabel()
 	}
 
-	// Header Row with Titles
 	titleRow := container.NewGridWithColumns(4,
 		widget.NewLabelWithStyle("Period", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Total Income", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -60,24 +57,20 @@ func WeeklyReport(window fyne.Window) *fyne.Container {
 		widget.NewLabelWithStyle("Balance", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
-	// Create the incomes list
 	weeklyReportList = widget.NewList(
 		func() int {
 			return len(reports)
 		},
 		func() fyne.CanvasObject {
-			// month label
+
 			monthLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			monthLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
-			// total income label
 			totalIncomeLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 
-			// total expenses label
 			totalExpensesLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			totalExpensesLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
-			// balance label
 			balanceLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			balanceLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
@@ -93,7 +86,6 @@ func WeeklyReport(window fyne.Window) *fyne.Container {
 			report := reports[id]
 			row := obj.(*fyne.Container)
 
-			// Retrieve the components in the row
 			monthLabel := row.Objects[0].(*widget.Label)
 			totalIncomeLabel := row.Objects[1].(*widget.Label)
 			totalExpensesLabel := row.Objects[2].(*widget.Label)
@@ -113,9 +105,8 @@ func WeeklyReport(window fyne.Window) *fyne.Container {
 		},
 	)
 
-	// No results label
 	noResultsLabel = widget.NewLabel("No results found")
-	noResultsLabel.Hide() // Hide by default
+	noResultsLabel.Hide()
 
 	exportToCSVBtn := widget.NewButton("Export to CSV", func() {
 		ExportWeeklyCSVReport(window)
@@ -127,7 +118,6 @@ func WeeklyReport(window fyne.Window) *fyne.Container {
 
 	updateReportList()
 
-	// grid for the add income and export incomes button
 	exportButtonContainer := container.New(layout.NewGridLayout(2), exportToPDFBtn, exportToCSVBtn)
 
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, weeklyReportList, noResultsLabel)
@@ -144,7 +134,7 @@ func ExportWeeklyCSVReport(window fyne.Window) {
 		dialog.ShowError(err, window)
 	} else {
 		if len(records) != 0 {
-			// Create progress dialog
+
 			progress := widget.NewProgressBar()
 			progressDialog := dialog.NewCustom("Exporting Weekly Reports", "Cancel", progress, window)
 			progressDialog.Show()
@@ -160,10 +150,8 @@ func ExportWeeklyCSVReport(window fyne.Window) {
 				writer := csv.NewWriter(file)
 				defer writer.Flush()
 
-				// Write header
 				writer.Write([]string{"Period", "Total Income", "Total Expense", "Balance"})
 
-				// Write income data
 				for i, record := range records {
 					total_income_string := strconv.Itoa(int(record.TotalIncome))
 					total_expense_string := strconv.Itoa(int(record.TotalExpense))
@@ -176,11 +164,9 @@ func ExportWeeklyCSVReport(window fyne.Window) {
 						balance_string,
 					})
 
-					// Update progress
 					progress.SetValue(float64(i+1) / float64(len(records)))
 				}
 
-				// Close progress dialog after exporting
 				progressDialog.Hide()
 				dialog.ShowInformation("Export Successful", "Records have been exported to weekly_report.csv", window)
 			}()
@@ -190,7 +176,6 @@ func ExportWeeklyCSVReport(window fyne.Window) {
 	}
 }
 
-// show report dialog
 func showWeeklyReportPDFDialog(w fyne.Window) {
 	records, _ := utils.GetWeeklyReport(w)
 

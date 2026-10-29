@@ -3,6 +3,7 @@ package views
 import (
 	"fynance/auth"
 	"fynance/helpers"
+	"fynance/models"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -12,7 +13,7 @@ import (
 )
 
 func RegisterView(window fyne.Window, showDashboard func()) *fyne.Container {
-	// Load background image
+
 	bgImage := canvas.NewImageFromFile("assets/background.png")
 	bgImage.FillMode = canvas.ImageFillStretch
 
@@ -35,7 +36,13 @@ func RegisterView(window fyne.Window, showDashboard func()) *fyne.Container {
 			dialog.ShowInformation("User Register", "All fields are required", window)
 		} else {
 
-			err := auth.Register(username, phone, password)
+			user := models.User{
+				Username: username,
+				Password: password,
+				Phone:    phone,
+			}
+
+			err := auth.Register(&user)
 			if err != nil {
 				dialog.ShowInformation("User Register", "Cannot Register account: "+err.Error(), window)
 			} else {
@@ -50,7 +57,6 @@ func RegisterView(window fyne.Window, showDashboard func()) *fyne.Container {
 		window.SetContent(LoginView(window, showDashboard))
 	})
 
-	// enter key to register
 	passwordEntry.OnSubmitted = func(s string) {
 		registerButton.OnTapped()
 	}

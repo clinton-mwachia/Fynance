@@ -16,19 +16,18 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var expenseDetailList *widget.List
 
-func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.CanvasObject {
-	// Load the settings on app startup
+func ExpenseDetailsView(window fyne.Window, userID uint) fyne.CanvasObject {
+
 	settings, err := pages.LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error loading settings", window)
 	}
 
-	pageSize, err := strconv.Atoi(settings.PageSize) // Number of details per page
+	pageSize, err := strconv.Atoi(settings.PageSize)
 
 	if err != nil {
 		dialog.ShowError(err, window)
@@ -43,7 +42,6 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
 
-	// Update visibility of no results label
 	updateNoResultsLabel := func() {
 		if len(expense_details) == 0 {
 			noResultsLabel.Show()
@@ -52,17 +50,21 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 		}
 	}
 
-	// Load expense_details for the specified page
 	loadExpenseDetails := func(page int) {
-		// Check if search is active
+		progress := widget.NewProgressBar()
+		progress.SetValue(0)
+		progressDialog := dialog.NewCustom("Loading Incomes", "Cancel", progress, window)
+		progressDialog.Show()
 		go func() {
 			if searchEntry.Text != "" {
-				// Use filtered expense_details when a search query is active
+
 				expense_details = searchResults
 				totalExpenseDetails = int64(len(expense_details))
 			} else {
-				// Use all expense_details for normal pagination
-				expense_details = utils.GetExpenseDetailsPaginated(page, pageSize, window)
+
+				expense_details = utils.GetExpenseDetailsPaginated(page, pageSize, window, func(progressValue float64) {
+					progress.SetValue(progressValue)
+				})
 
 				totalExpenseDetails = utils.CountExpenseDetails(window)
 			}
@@ -70,10 +72,8 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 			fyne.Do(func() {
 				expenseDetailList.Refresh()
 
-				// Enable or disable pagination buttons based on the current page and total pages
 				totalPages := int(math.Ceil(float64(totalExpenseDetails) / float64(pageSize)))
 
-				// Update page label
 				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
 				updateNoResultsLabel()
@@ -86,6 +86,9 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 				if currentPage < totalPages {
 					nextButton.Enable()
 				}
+
+				progress.SetValue(1.0)
+				progressDialog.Hide()
 			})
 		}()
 	}
@@ -95,20 +98,17 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 		updateNoResultsLabel()
 	}
 
-	// Header Row with Titles
 	titleRow := container.NewGridWithColumns(2,
 		widget.NewLabelWithStyle("Categories", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Actions", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
-	// Create the expense_details list
 	expenseDetailList = widget.NewList(
 		func() int {
 			return len(expense_details)
 		},
 		func() fyne.CanvasObject {
 
-			// expense category label
 			expenseCategLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			expenseCategLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
@@ -125,7 +125,6 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 			expense_detail := expense_details[id]
 			row := obj.(*fyne.Container)
 
-			// Retrieve the components in the row
 			expenseCategLabel := row.Objects[0].(*widget.Label)
 
 			editButton := row.Objects[1].(*fyne.Container).Objects[0].(*widget.Button)
@@ -137,7 +136,6 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 				showExpenseDetailForm(window, &expense_detail, userID, updateExpenseDetailList)
 			}
 
-			//delete detail button
 			deleteButton.OnTapped = func() {
 				dialog.ShowConfirm("Delete expense Detail", "Are you sure you want to delete this detail?",
 					func(ok bool) {
@@ -147,8 +145,7 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 							if err != nil {
 								dialog.ShowError(err, window)
 							} else {
-								// Create a new notification
-								// fetch user by ID
+
 								var user = utils.GetUserByID(userID, window)
 								newNotification := models.Notification{
 									UserID:  user.ID,
@@ -157,8 +154,6 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 								}
 
 								utils.AddNotification(newNotification, window)
-
-								//utils.PlayNotificationSound(window)
 
 								pages.UpdateNotificationCount(window)
 
@@ -174,7 +169,6 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 		},
 	)
 
-	// Pagination controls
 	pagination := container.NewHBox()
 	prevButton = widget.NewButton("Prev", func() {
 		if currentPage > 1 {
@@ -189,22 +183,18 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 		}
 	})
 
-	// Initialize page label
 	pageLabel = widget.NewLabel(fmt.Sprintf("Page %d of %d", currentPage, int(math.Ceil(float64(totalExpenseDetails)/float64(pageSize)))))
 
-	// Add buttons and label to the pagination container
 	pagination.Add(prevButton)
 	pagination.Add(pageLabel)
 	pagination.Add(nextButton)
 
-	// Center the pagination controls
 	pagination = container.NewCenter(pagination)
 
 	addDetailButton := widget.NewButton("Add Category", func() {
 		showExpenseDetailForm(window, nil, userID, updateExpenseDetailList)
 	})
 
-	// Search functionality
 	searchEntry = widget.NewEntry()
 	searchEntry.SetPlaceHolder("Search Category")
 	searchButton := widget.NewButtonWithIcon("", theme.SearchIcon(), func() {
@@ -212,47 +202,38 @@ func ExpenseDetailsView(window fyne.Window, userID primitive.ObjectID) fyne.Canv
 		if searchText != "" {
 			searchResults = utils.SearchExpenseDetails(searchText, window)
 			updateNoResultsLabel()
-			currentPage = 1 // Reset to first page of search results
+			currentPage = 1
 			updateExpenseDetailList()
 		} else {
-			// If search is cleared, reset the pagination and detail list
+
 			searchResults = nil
 			currentPage = 1
 			updateExpenseDetailList()
 		}
 	})
 
-	// enter key to search expenses
 	searchEntry.OnSubmitted = func(s string) {
 		searchButton.OnTapped()
 	}
 
-	// the search entry and bulk upload button
 	searchContainer := container.New(layout.NewGridLayout(2), searchEntry, searchButton)
 
-	// No results label
 	noResultsLabel = widget.NewLabel("No results found")
-	noResultsLabel.Hide() // Hide by default
+	noResultsLabel.Hide()
 
-	// Load the initial set of expense_details
 	updateExpenseDetailList()
 
-	// grid for the add detail and export expense_details button
 	exportButtonContainer := container.New(layout.NewGridLayout(1), addDetailButton)
 
-	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, expenseDetailList, noResultsLabel)
 
 	listWrapper := container.NewBorder(exportButtonContainer, pagination, nil, nil, listContainer)
 
-	// Return the final container with all elements
 	return container.NewBorder(nil, nil, nil, nil, container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
 }
 
-// Function to display the detail form for adding or editing a detail
-func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, UserID primitive.ObjectID, onSubmit func()) {
+func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, UserID uint, onSubmit func()) {
 
-	// fetch user by ID
 	var user = utils.GetUserByID(UserID, window)
 
 	var expense_detaill models.ExpenseDetail
@@ -261,12 +242,10 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 		expense_detaill = *existing
 	}
 
-	// Initialize form fields
 	expenseCategory := widget.NewEntry()
 	expenseCategory.SetPlaceHolder("eg Rent")
 	expenseCategory.SetText(expense_detaill.ExpenseCategory)
 
-	// Create form
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Category", Widget: expenseCategory},
@@ -293,7 +272,7 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 				if err != nil {
 					dialog.ShowError(err, window)
 				} else {
-					// Create a new notification
+
 					userID := helpers.CurrentUserID
 					content := user.Username + " Edited " + expense_detaill.ExpenseCategory
 					newNotification := models.Notification{
@@ -303,17 +282,14 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 					}
 
 					utils.AddNotification(newNotification, window)
-					//utils.PlayNotificationSound(window)
 
 					utils.Logger(content, "SUCCESS", window)
 
-					// Update the notification count
 					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "expense Detail updated successfully!", window)
 				}
 
 			} else {
-				expense_detaill.ID = primitive.NewObjectID()
 				parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
 
 				if err != nil {
@@ -327,7 +303,7 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 				if err != nil {
 					dialog.ShowError(err, window)
 				} else {
-					// Create a new notification
+
 					userID := helpers.CurrentUserID
 					content := user.Username + " Added " + expense_detaill.ExpenseCategory
 					newNotification := models.Notification{
@@ -337,11 +313,9 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 					}
 
 					utils.AddNotification(newNotification, window)
-					//utils.PlayNotificationSound(window)
 
 					utils.Logger(content, "SUCCESS", window)
 
-					// Update the notification count
 					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Expense Detail added", window)
 				}
@@ -355,11 +329,9 @@ func showExpenseDetailForm(window fyne.Window, existing *models.ExpenseDetail, U
 		},
 	}
 
-	// Create a container for the form
 	formContainer := container.NewVBox(form)
 	centeredForm := helpers.NewFixedWidthCenter(formContainer, 400)
 	formSave := container.NewCenter(centeredForm)
 
-	// Show the form dialog
 	dialog.ShowCustom("expense Detail Form", "Cancel", formSave, window)
 }

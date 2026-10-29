@@ -1,7 +1,6 @@
 package views
 
 import (
-	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -26,28 +25,25 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/xuri/excelize/v2"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var expenseList *widget.List
-var selectedExpenses map[int]bool // Track selected expenses
+var selectedExpenses map[int]bool
 
 func ExpenseView(window fyne.Window) *fyne.Container {
 	userID := helpers.CurrentUserID
-	// Load the settings on app startup
+
 	settings, err := pages.LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error loading settings", window)
 	}
 
-	pageSize, err := strconv.Atoi(settings.PageSize) // Number of expenses per page
+	pageSize, err := strconv.Atoi(settings.PageSize)
 
 	if err != nil {
 		dialog.ShowError(err, window)
 	}
 
-	// Initialize selected expenses map
 	selectedExpenses = make(map[int]bool)
 
 	var expenses []models.Expense
@@ -59,26 +55,21 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
 
-	// Selection controls with updated functionality
 	selectAllButton := widget.NewButton("Select All", func() {
-		// Update the selection map for all visible todos
 		for i := range expenses {
 			selectedExpenses[i] = true
 		}
 
-		// Force refresh of the entire list
 		expenseList.Refresh()
 	})
 
 	deselectAllButton := widget.NewButton("Deselect All", func() {
-		// Clear all selections
+
 		selectedExpenses = make(map[int]bool)
 
-		// Force refresh of the entire list
 		expenseList.Refresh()
 	})
 
-	// Update visibility of no results label
 	updateNoResultsLabel := func() {
 		if len(expenses) == 0 {
 			noResultsLabel.Show()
@@ -87,36 +78,32 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		}
 	}
 
-	// Load expenses for the specified page
 	loadExpenses := func(page int) {
-		// Show progress bar dialog
+
 		progress := widget.NewProgressBar()
 		progress.SetValue(0)
 		progressDialog := dialog.NewCustom("Loading Expenses", "Cancel", progress, window)
 		progressDialog.Show()
-		// Check if search is active
+
 		go func() {
 			if searchEntry.Text != "" {
-				// Use filtered expenses when a search query is active
+
 				expenses = searchResults
 				totalExpenses = int64(len(expenses))
 			} else {
-				// Use all expenses for normal pagination
+
 				expenses = utils.GetExpensesPaginated(page, pageSize, window, func(progressValue float64) {
 					progress.SetValue(progressValue)
 				})
 				totalExpenses = utils.CountExpenses(window)
 			}
-			// Reset selected incomes when loading new page
+
 			selectedExpenses = make(map[int]bool)
 
 			fyne.Do(func() {
 				expenseList.Refresh()
 
-				// Enable or disable pagination buttons based on the current page and total pages
 				totalPages := int(math.Ceil(float64(totalExpenses) / float64(pageSize)))
-
-				// Update page label
 
 				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
@@ -131,7 +118,7 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 					nextButton.Enable()
 				}
 
-				progress.SetValue(1.0) // Complete progress
+				progress.SetValue(1.0)
 				progressDialog.Hide()
 			})
 		}()
@@ -142,7 +129,6 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		updateNoResultsLabel()
 	}
 
-	// Header Row with Titles
 	titleRow := container.NewGridWithColumns(5,
 		widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Category", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -151,23 +137,20 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		widget.NewLabelWithStyle("Actions", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
-	// Create the expenses list
 	expenseList = widget.NewList(
 		func() int {
 			return len(expenses)
 		},
 		func() fyne.CanvasObject {
-			// initialise a checkbox
+
 			checkbox := widget.NewCheck("", nil)
-			// category label
+
 			categoryLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			categoryLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
-			// month  label
 			monthLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			monthLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
-			// amount label
 			amountLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			amountLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
@@ -189,15 +172,12 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 
 			checkbox := row.Objects[0].(*widget.Check)
 
-			// Important: Set the checked state before setting OnChanged
 			checkbox.SetChecked(selectedExpenses[id])
 
-			// Update checkbox state based on selectedExpenses map
 			checkbox.OnChanged = func(checked bool) {
 				selectedExpenses[id] = checked
 			}
 
-			// Retrieve the components in the row
 			categoryLabel := row.Objects[1].(*widget.Label)
 			monthLabel := row.Objects[2].(*widget.Label)
 			amountLabel := row.Objects[3].(*widget.Label)
@@ -208,8 +188,6 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 			categoryLabel.SetText(expense.Category)
 			monthLabel.SetText(expense.Month)
 
-			// amount to string
-			//amount_string := strconv.Itoa(int(expense.Amount))
 			amount_string := strconv.FormatFloat(expense.Amount, 'f', -1, 64)
 			amountLabel.SetText(amount_string)
 
@@ -217,7 +195,6 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 				showExpenseForm(window, &expense, userID, updateExpenseList)
 			}
 
-			//delete expense button
 			deleteButton.OnTapped = func() {
 				dialog.ShowConfirm("Delete Expense", "Are you sure you want to delete this expense?",
 					func(ok bool) {
@@ -227,8 +204,7 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 							if err != nil {
 								dialog.ShowError(err, window)
 							} else {
-								// Create a new notification
-								// fetch user by ID
+
 								var user = utils.GetUserByID(userID, window)
 								newNotification := models.Notification{
 									UserID:  user.ID,
@@ -237,8 +213,6 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 								}
 
 								utils.AddNotification(newNotification, window)
-
-								//utils.PlayNotificationSound(window)
 
 								pages.UpdateNotificationCount(window)
 
@@ -254,19 +228,17 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		},
 	)
 
-	// display all selecte expenses
 	deleteSelectedExpensesButton := widget.NewButton("Delete Selected", func() {
 		var selectedExpensesList []struct {
-			id       primitive.ObjectID
+			id       uint
 			category string
 			month    string
 		}
 
-		// Collect selected expenses
 		for id, expense := range expenses {
 			if selectedExpenses[id] {
 				selectedExpensesList = append(selectedExpensesList, struct {
-					id       primitive.ObjectID
+					id       uint
 					category string
 					month    string
 				}{
@@ -299,7 +271,7 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 			go func() {
 				var successCount, failCount int
 				var results []string
-				collection := utils.GetCollection("expenses") // Get the collection
+				db := utils.GetDB()
 
 				for i, expenseData := range selectedExpensesList {
 					select {
@@ -307,18 +279,16 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 						dialog.ShowInformation("Cancelled", "Deletion was cancelled", window)
 						return
 					default:
-						// Delete from database
-						_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": expenseData.id})
+
+						err := db.Delete(&models.Expense{}, expenseData.id).Error
 						if err != nil {
 							failCount++
 							results = append(results, fmt.Sprintf("❌ Failed to delete: %s", err.Error()))
 						} else {
 							successCount++
 							results = append(results, fmt.Sprintf("✓ Successfully deleted: %s", expenseData.category))
-
 						}
 
-						// Update progress
 						fyne.Do(func() {
 							progress.SetValue(float64(i+1) / float64(len(selectedExpensesList)))
 						})
@@ -329,7 +299,6 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 					progressDialog.Hide()
 				})
 
-				// Update notifications
 				utils.AddNotification(models.Notification{
 					UserID:  userID,
 					Message: fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount),
@@ -341,15 +310,13 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 				detail := fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount)
 				utils.Logger(detail, "SUCCESS", window)
 
-				updateExpenseList() // Refresh UI after deletion
+				updateExpenseList()
 
-				// Show deletion results
 				dialog.ShowInformation("Deletion Results", strings.Join(results, "\n"), window)
 			}()
 		}, window)
 	})
 
-	// Pagination controls
 	pagination := container.NewHBox()
 	prevButton = widget.NewButton("Prev", func() {
 		if currentPage > 1 {
@@ -364,15 +331,12 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		}
 	})
 
-	// Initialize page label
 	pageLabel = widget.NewLabel(fmt.Sprintf("Page %d of %d", currentPage, int(math.Ceil(float64(totalExpenses)/float64(pageSize)))))
 
-	// Add buttons and label to the pagination container
 	pagination.Add(prevButton)
 	pagination.Add(pageLabel)
 	pagination.Add(nextButton)
 
-	// Center the pagination controls
 	pagination = container.NewCenter(pagination)
 
 	addExpenseButton := widget.NewButton("Add Expense", func() {
@@ -383,12 +347,10 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		DownloadExpensesTemplate(window, "./templates/expenses_template.xlsx")
 	})
 
-	// Bulk Upload button
 	bulkUploadExpensesButton := widget.NewButton("Bulk Upload", func() {
 		BulkUploadExpenses(window, updateExpenseList, userID)
 	})
 
-	// Search functionality
 	searchEntry = widget.NewEntry()
 	searchEntry.SetPlaceHolder("Search by category/month...")
 	searchButton := widget.NewButtonWithIcon("", theme.SearchIcon(), func() {
@@ -396,27 +358,25 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		if searchText != "" {
 			searchResults = utils.SearchExpenses(searchText, window)
 			updateNoResultsLabel()
-			currentPage = 1 // Reset to first page of search results
+			currentPage = 1
 			updateExpenseList()
 		} else {
-			// If search is cleared, reset the pagination and expense list
+
 			searchResults = nil
 			currentPage = 1
 			updateExpenseList()
 		}
 	})
 
-	// enter key to search expenses
 	searchEntry.OnSubmitted = func(s string) {
 		searchButton.OnTapped()
 	}
 
-	// Define functions for exporting data
 	exportToCSV := widget.NewButton("export to csv", func() {
 		expenses := utils.GetAllExpenses(window)
 
 		if len(expenses) != 0 {
-			// Create progress dialog
+
 			progress := widget.NewProgressBar()
 			progressDialog := dialog.NewCustom("Exporting Expenses", "Cancel", progress, window)
 			progressDialog.Show()
@@ -432,10 +392,8 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 				writer := csv.NewWriter(file)
 				defer writer.Flush()
 
-				// Write header
 				writer.Write([]string{"Category", "Month", "Year", "Amount"})
 
-				// Write expense data
 				for i, expense := range expenses {
 					amount_string := strconv.Itoa(int(expense.Amount))
 					writer.Write([]string{
@@ -445,11 +403,9 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 						amount_string,
 					})
 
-					// Update progress
 					progress.SetValue(float64(i+1) / float64(len(expenses)))
 				}
 
-				// Close progress dialog after exporting
 				progressDialog.Hide()
 				dialog.ShowInformation("Export Successful", "Expenses have been exported to expenses.csv", window)
 			}()
@@ -458,14 +414,11 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		}
 	})
 
-	// the search entry and bulk upload button
 	searchContainer := container.New(layout.NewGridLayout(2), searchEntry, searchButton)
 
-	// No results label
 	noResultsLabel = widget.NewLabel("No results found")
-	noResultsLabel.Hide() // Hide by default
+	noResultsLabel.Hide()
 
-	// Load the initial set of expenses
 	updateExpenseList()
 
 	var exportButtonContainer *fyne.Container
@@ -479,19 +432,15 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 			addExpenseButton, exportToCSV)
 	}
 
-	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, expenseList, noResultsLabel)
 
 	listWrapper := container.NewBorder(exportButtonContainer, pagination, nil, nil, listContainer)
 
-	// Return the final container with all elements
 	return layouts.BaseLayout(window, "Expenses", container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
 }
 
-// Function to display the expense form for adding or editing a expense
-func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primitive.ObjectID, onSubmit func()) {
+func showExpenseForm(window fyne.Window, existing *models.Expense, UserID uint, onSubmit func()) {
 
-	// fetch user by ID
 	var user = utils.GetUserByID(UserID, window)
 
 	var expense models.Expense
@@ -499,16 +448,15 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 	if isEdit {
 		expense = *existing
 	}
-	// get the expense categories
+
 	expense_categories := utils.GetAllExpenseDetails(window)
 
 	var expenseCategories []string
 	for _, category := range expense_categories {
-		// display available expense categories
+
 		expenseCategories = append(expenseCategories, category.ExpenseCategory)
 	}
 
-	// Initialize form fields
 	category := widget.NewSelect(expenseCategories, func(s string) {
 	})
 	category.SetSelected(expense.Category)
@@ -522,7 +470,6 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 		month.SetSelected(expense.Month)
 	}
 
-	// get current year
 	currentTime := time.Now()
 	currentYear := currentTime.Year()
 	string_current_year := strconv.Itoa(currentYear)
@@ -536,7 +483,6 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 	amount := widget.NewEntry()
 	amount.SetText(string_amount)
 
-	// Create form
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Category", Widget: category},
@@ -572,7 +518,7 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 				if err != nil {
 					dialog.ShowError(err, window)
 				} else {
-					// Create a new notification
+
 					userID := helpers.CurrentUserID
 					newNotification := models.Notification{
 						UserID:  userID,
@@ -581,18 +527,15 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 					}
 
 					utils.AddNotification(newNotification, window)
-					//utils.PlayNotificationSound(window)
 
 					detail := user.Username + " Edited Expense: " + expense.Category
 					utils.Logger(detail, "SUCCESS", window)
 
-					// Update the notification count
 					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Expense updated successfully!", window)
 				}
 
 			} else {
-				expense.ID = primitive.NewObjectID()
 				parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
 
 				if err != nil {
@@ -606,7 +549,7 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 				if err != nil {
 					dialog.ShowError(err, window)
 				} else {
-					// Create a new notification
+
 					userID := helpers.CurrentUserID
 					newNotification := models.Notification{
 						UserID:  userID,
@@ -615,12 +558,10 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 					}
 
 					utils.AddNotification(newNotification, window)
-					//utils.PlayNotificationSound(window)
 
 					detail := user.Username + " Added Expense: " + expense.Category
 					utils.Logger(detail, "SUCCESS", window)
 
-					// Update the notification count
 					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Expense added", window)
 				}
@@ -634,16 +575,13 @@ func showExpenseForm(window fyne.Window, existing *models.Expense, UserID primit
 		},
 	}
 
-	// Create a container for the form
 	formContainer := container.NewVBox(form)
 	centeredForm := helpers.NewFixedWidthCenter(formContainer, 400)
 	formSave := container.NewCenter(centeredForm)
 
-	// Show the form dialog
 	dialog.ShowCustom("Expense Form", "Cancel", formSave, window)
 }
 
-// download expenses template
 func DownloadExpensesTemplate(parent fyne.Window, sourcePath string) {
 	info, err := os.Stat(sourcePath)
 	if err != nil {
@@ -688,7 +626,6 @@ func DownloadExpensesTemplate(parent fyne.Window, sourcePath string) {
 				return
 			}
 
-			// User cancelled.
 			if writer == nil {
 				return
 			}
@@ -697,7 +634,6 @@ func DownloadExpensesTemplate(parent fyne.Window, sourcePath string) {
 			defer func() {
 				writer.Close()
 
-				// Remove incomplete files if the copy failed.
 				if !success && writer.URI() != nil &&
 					writer.URI().Scheme() == "file" {
 
@@ -745,7 +681,7 @@ func DownloadExpensesTemplate(parent fyne.Window, sourcePath string) {
 	saveDialog.Show()
 }
 
-func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID primitive.ObjectID) {
+func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID uint) {
 	openFileDialog := dialog.NewFileOpen(
 		func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
@@ -757,7 +693,6 @@ func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID pri
 			}
 			defer reader.Close()
 
-			// Check file extension before proceeding
 			if !strings.HasSuffix(reader.URI().Name(), ".xlsx") {
 				dialog.ShowError(errors.New("invalid file format, please upload a xlsx file"), window)
 				return
@@ -776,12 +711,11 @@ func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID pri
 
 				go func() {
 					utils.BulkInsertExpenses(expenses, window, progressBar)
-					updateExpenseList() // Refresh list after bulk upload
+					updateExpenseList()
 					fyne.Do(func() {
 						progressDialog.Hide()
 					})
 
-					// Update notifications
 					utils.AddNotification(models.Notification{
 						UserID:  userID,
 						Message: fmt.Sprintf("Bulk Upload: %d Expenses Uploaded", len(expenses)),
@@ -797,7 +731,6 @@ func BulkUploadExpenses(window fyne.Window, updateExpenseList func(), userID pri
 	openFileDialog.Show()
 }
 
-// Function to parse xlsx and return expenses
 func parseExpensesXLSX(filePath string, window fyne.Window) ([]models.Expense, error) {
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
@@ -830,17 +763,15 @@ func parseExpensesXLSX(filePath string, window fyne.Window) ([]models.Expense, e
 	expenses := make([]models.Expense, 0, len(rows)-1)
 
 	for i, row := range rows {
-		// Skip header row.
+
 		if i == 0 {
 			continue
 		}
 
-		// Skip empty rows.
 		if len(row) == 0 {
 			continue
 		}
 
-		// Ensure the expected columns exist.
 		if len(row) < 4 {
 			continue
 		}
@@ -864,7 +795,6 @@ func parseExpensesXLSX(filePath string, window fyne.Window) ([]models.Expense, e
 		}
 
 		expense := models.Expense{
-			ID:       primitive.NewObjectID(),
 			Category: category,
 			Month:    month,
 			Year:     year,

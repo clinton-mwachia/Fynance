@@ -10,11 +10,10 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func LoginView(window fyne.Window, showDashboard func()) *fyne.Container {
-	// Load background image
+
 	bgImage := canvas.NewImageFromFile("assets/background.png")
 	bgImage.FillMode = canvas.ImageFillStretch
 
@@ -32,7 +31,6 @@ func LoginView(window fyne.Window, showDashboard func()) *fyne.Container {
 			dialog.ShowInformation("User Login", "All fields are required", window)
 		}
 
-		// Show progress bar dialog
 		progressBar := widget.NewProgressBar()
 		progressBar.SetValue(0)
 		progressDialog := dialog.NewCustom("Logging In User", "Cancel", progressBar, window)
@@ -43,13 +41,7 @@ func LoginView(window fyne.Window, showDashboard func()) *fyne.Container {
 		})
 		if err != nil {
 			progressDialog.Hide()
-			if err == mongo.ErrNoDocuments {
-				utils.Logger("User not found", "ERROR", window)
-				dialog.ShowError(err, window)
-			} else {
-				utils.Logger(username+" wrong password/username", "ERROR", window)
-				dialog.ShowError(err, window)
-			}
+			dialog.ShowError(err, window)
 		} else {
 			progressDialog.Hide()
 			detail := user.Username + " Logged in"
@@ -64,7 +56,6 @@ func LoginView(window fyne.Window, showDashboard func()) *fyne.Container {
 		window.SetContent(RegisterView(window, showDashboard))
 	})
 
-	// enter key to login
 	passwordEntry.OnSubmitted = func(s string) {
 		loginButton.OnTapped()
 	}
@@ -76,7 +67,7 @@ func LoginView(window fyne.Window, showDashboard func()) *fyne.Container {
 		registerButton,
 	)
 
-	centeredForm := helpers.NewFixedWidthCenter(form, 300) // Set width to 300
+	centeredForm := helpers.NewFixedWidthCenter(form, 300)
 
 	return container.NewStack(bgImage, container.NewCenter(centeredForm))
 

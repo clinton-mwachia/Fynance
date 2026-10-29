@@ -8,7 +8,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func Sidebar(window fyne.Window, showParameters, showIncome,
@@ -40,7 +39,7 @@ func Sidebar(window fyne.Window, showParameters, showIncome,
 
 	sidebarItems = append(sidebarItems, widget.NewButton("Logout", func() {
 		utils.Logger("User Logged out", "SUCCESS", window)
-		helpers.CurrentUserID = primitive.NilObjectID
+		helpers.CurrentUserID = 0
 		showLogin()
 	}))
 

@@ -1,7 +1,6 @@
 package views
 
 import (
-	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -26,28 +25,25 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/xuri/excelize/v2"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var incomeList *widget.List
-var selectedIncomes map[int]bool // Track selected incomes
+var selectedIncomes map[int]bool
 
 func IncomeView(window fyne.Window) *fyne.Container {
 	userID := helpers.CurrentUserID
-	// Load the settings on app startup
+
 	settings, err := pages.LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("User Settings", "Error loading settings", window)
 	}
 
-	pageSize, err := strconv.Atoi(settings.PageSize) // Number of incomes per page
+	pageSize, err := strconv.Atoi(settings.PageSize)
 
 	if err != nil {
 		dialog.ShowError(err, window)
 	}
 
-	// Initialize selected incomes map
 	selectedIncomes = make(map[int]bool)
 
 	var incomes []models.Income
@@ -59,26 +55,20 @@ func IncomeView(window fyne.Window) *fyne.Container {
 	var searchEntry *widget.Entry
 	var noResultsLabel *widget.Label
 
-	// Selection controls with updated functionality
 	selectAllButton := widget.NewButton("Select All", func() {
-		// Update the selection map for all visible todos
 		for i := range incomes {
 			selectedIncomes[i] = true
 		}
 
-		// Force refresh of the entire list
 		incomeList.Refresh()
 	})
 
 	deselectAllButton := widget.NewButton("Deselect All", func() {
-		// Clear all selections
 		selectedIncomes = make(map[int]bool)
 
-		// Force refresh of the entire list
 		incomeList.Refresh()
 	})
 
-	// Update visibility of no results label
 	updateNoResultsLabel := func() {
 		if len(incomes) == 0 {
 			noResultsLabel.Show()
@@ -87,37 +77,31 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		}
 	}
 
-	// Load incomes for the specified page
 	loadIncomes := func(page int) {
-		// Show progress bar dialog
 		progress := widget.NewProgressBar()
 		progress.SetValue(0)
 		progressDialog := dialog.NewCustom("Loading Incomes", "Cancel", progress, window)
 		progressDialog.Show()
-		// Check if search is active
+
 		go func() {
 			if searchEntry.Text != "" {
-				// Use filtered incomes when a search query is active
+
 				incomes = searchResults
 				totalIncomes = int64(len(incomes))
 			} else {
-				// Use all incomes for normal pagination
 				incomes = utils.GetIncomesPaginated(page, pageSize, window, func(progressValue float64) {
 					progress.SetValue(progressValue)
 				})
 				totalIncomes = utils.CountIncomes(window)
 			}
 
-			// Reset selected incomes when loading new page
 			selectedIncomes = make(map[int]bool)
 
 			fyne.Do(func() {
 				incomeList.Refresh()
 
-				// Enable or disable pagination buttons based on the current page and total pages
 				totalPages := int(math.Ceil(float64(totalIncomes) / float64(pageSize)))
 
-				// Update page label
 				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
 				updateNoResultsLabel()
@@ -130,7 +114,7 @@ func IncomeView(window fyne.Window) *fyne.Container {
 				if currentPage < totalPages {
 					nextButton.Enable()
 				}
-				progress.SetValue(1.0) // Complete progress
+				progress.SetValue(1.0)
 				progressDialog.Hide()
 			})
 		}()
@@ -141,7 +125,6 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		updateNoResultsLabel()
 	}
 
-	// Header Row with Titles
 	titleRow := container.NewGridWithColumns(5,
 		widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Category", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -150,24 +133,19 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		widget.NewLabelWithStyle("Actions", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
-	// Create the incomes list
 	incomeList = widget.NewList(
 		func() int {
 			return len(incomes)
 		},
 		func() fyne.CanvasObject {
-			// initialise a checkbox
 			checkbox := widget.NewCheck("", nil)
 
-			// category label
 			categoryLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			categoryLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
-			// month  label
 			monthLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			monthLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
-			// amount label
 			amountLabel := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{})
 			amountLabel.Truncation = fyne.TextTruncation(fyne.TextTruncateEllipsis)
 
@@ -189,15 +167,12 @@ func IncomeView(window fyne.Window) *fyne.Container {
 
 			checkbox := row.Objects[0].(*widget.Check)
 
-			// Important: Set the checked state before setting OnChanged
 			checkbox.SetChecked(selectedIncomes[id])
 
-			// Update checkbox state based on selectedExpenses map
 			checkbox.OnChanged = func(checked bool) {
 				selectedIncomes[id] = checked
 			}
 
-			// Retrieve the components in the row
 			categoryLabel := row.Objects[1].(*widget.Label)
 			monthLabel := row.Objects[2].(*widget.Label)
 			amountLabel := row.Objects[3].(*widget.Label)
@@ -208,8 +183,6 @@ func IncomeView(window fyne.Window) *fyne.Container {
 			categoryLabel.SetText(income.Category)
 			monthLabel.SetText(income.Month)
 
-			// amount to string
-			//amount_string := strconv.Itoa(int(income.Amount))
 			amount_string := strconv.FormatFloat(income.Amount, 'f', -1, 64)
 			amountLabel.SetText(amount_string)
 
@@ -217,7 +190,6 @@ func IncomeView(window fyne.Window) *fyne.Container {
 				showIncomeForm(window, &income, userID, updateIncomeList)
 			}
 
-			//delete income button
 			deleteButton.OnTapped = func() {
 				dialog.ShowConfirm("Delete Income", "Are you sure you want to delete this income?",
 					func(ok bool) {
@@ -227,8 +199,6 @@ func IncomeView(window fyne.Window) *fyne.Container {
 							if err != nil {
 								dialog.ShowError(err, window)
 							} else {
-								// Create a new notification
-								// fetch user by ID
 								var user = utils.GetUserByID(userID, window)
 
 								newNotification := models.Notification{
@@ -238,8 +208,6 @@ func IncomeView(window fyne.Window) *fyne.Container {
 								}
 
 								utils.AddNotification(newNotification, window)
-
-								//utils.PlayNotificationSound(window)
 
 								pages.UpdateNotificationCount(window)
 
@@ -255,19 +223,17 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		},
 	)
 
-	// display all selecte incomes
 	deleteSelectedIncomesButton := widget.NewButton("Delete Selected", func() {
 		var selectedIncomesList []struct {
-			id       primitive.ObjectID
+			id       uint
 			category string
 			month    string
 		}
 
-		// Collect selected incomes
 		for id, income := range incomes {
 			if selectedIncomes[id] {
 				selectedIncomesList = append(selectedIncomesList, struct {
-					id       primitive.ObjectID
+					id       uint
 					category string
 					month    string
 				}{
@@ -300,7 +266,7 @@ func IncomeView(window fyne.Window) *fyne.Container {
 			go func() {
 				var successCount, failCount int
 				var results []string
-				collection := utils.GetCollection("income") // Get the collection once
+				db := utils.GetDB()
 
 				for i, incomeData := range selectedIncomesList {
 					select {
@@ -308,18 +274,15 @@ func IncomeView(window fyne.Window) *fyne.Container {
 						dialog.ShowInformation("Cancelled", "Deletion was cancelled", window)
 						return
 					default:
-						// Delete from database
-						_, err := collection.DeleteOne(context.TODO(), bson.M{"_id": incomeData.id})
+						err := db.Delete(&models.Income{}, incomeData.id).Error
 						if err != nil {
 							failCount++
 							results = append(results, fmt.Sprintf("❌ Failed to delete: %s", err.Error()))
 						} else {
 							successCount++
 							results = append(results, fmt.Sprintf("✓ Successfully deleted: %s", incomeData.category))
-
 						}
 
-						// Update progress
 						fyne.Do(func() {
 							progress.SetValue(float64(i+1) / float64(len(selectedIncomesList)))
 						})
@@ -330,7 +293,6 @@ func IncomeView(window fyne.Window) *fyne.Container {
 					progressDialog.Hide()
 				})
 
-				// Update notifications
 				utils.AddNotification(models.Notification{
 					UserID:  userID,
 					Message: fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount),
@@ -342,15 +304,13 @@ func IncomeView(window fyne.Window) *fyne.Container {
 				detail := fmt.Sprintf("Bulk Deletion: %d deleted, %d failed", successCount, failCount)
 				utils.Logger(detail, "SUCCESS", window)
 
-				updateIncomeList() // Refresh UI after deletion
+				updateIncomeList()
 
-				// Show deletion results
 				dialog.ShowInformation("Deletion Results", strings.Join(results, "\n"), window)
 			}()
 		}, window)
 	})
 
-	// Pagination controls
 	pagination := container.NewHBox()
 	prevButton = widget.NewButton("Prev", func() {
 		if currentPage > 1 {
@@ -365,15 +325,12 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		}
 	})
 
-	// Initialize page label
 	pageLabel = widget.NewLabel(fmt.Sprintf("Page %d of %d", currentPage, int(math.Ceil(float64(totalIncomes)/float64(pageSize)))))
 
-	// Add buttons and label to the pagination container
 	pagination.Add(prevButton)
 	pagination.Add(pageLabel)
 	pagination.Add(nextButton)
 
-	// Center the pagination controls
 	pagination = container.NewCenter(pagination)
 
 	addIncomeButton := widget.NewButton("Add Income", func() {
@@ -384,12 +341,10 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		DownloadIncomeTemplate(window, "./templates/income_template.xlsx")
 	})
 
-	// Bulk Upload button
 	bulkUploadIncomeButton := widget.NewButton("Bulk Upload", func() {
 		BulkUploadIncome(window, updateIncomeList, userID)
 	})
 
-	// Search functionality
 	searchEntry = widget.NewEntry()
 	searchEntry.SetPlaceHolder("Search by category/month...")
 	searchButton := widget.NewButtonWithIcon("", theme.SearchIcon(), func() {
@@ -397,34 +352,29 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		if searchText != "" {
 			searchResults = utils.SearchIncomes(searchText, window)
 			updateNoResultsLabel()
-			currentPage = 1 // Reset to first page of search results
+			currentPage = 1
 			updateIncomeList()
 		} else {
-			// If search is cleared, reset the pagination and income list
+
 			searchResults = nil
 			currentPage = 1
 			updateIncomeList()
 		}
 	})
 
-	// enter key to search income
 	searchEntry.OnSubmitted = func(s string) {
 		searchButton.OnTapped()
 	}
 
-	// Define functions for exporting data
 	exportToCSV := widget.NewButton("export to csv", func() {
 		ExportIncomeCSV(window)
 	})
 
-	// the search entry and bulk upload button
 	searchContainer := container.New(layout.NewGridLayout(2), searchEntry, searchButton)
 
-	// No results label
 	noResultsLabel = widget.NewLabel("No results found")
-	noResultsLabel.Hide() // Hide by default
+	noResultsLabel.Hide()
 
-	// Load the initial set of incomes
 	updateIncomeList()
 
 	var exportButtonContainer *fyne.Container
@@ -438,16 +388,14 @@ func IncomeView(window fyne.Window) *fyne.Container {
 			addIncomeButton, exportToCSV)
 	}
 
-	// Define the container for the list with pagination controls
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, incomeList, noResultsLabel)
 
 	listWrapper := container.NewBorder(exportButtonContainer, pagination, nil, nil, listContainer)
 
-	// Return the final container with all elements
 	return layouts.BaseLayout(window, "Income", container.NewBorder(searchContainer, nil, nil, nil, listWrapper))
 }
 
-func BulkUploadIncome(window fyne.Window, updateIncomeList func(), userID primitive.ObjectID) {
+func BulkUploadIncome(window fyne.Window, updateIncomeList func(), userID uint) {
 	openFileDialog := dialog.NewFileOpen(
 		func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
@@ -459,7 +407,6 @@ func BulkUploadIncome(window fyne.Window, updateIncomeList func(), userID primit
 			}
 			defer reader.Close()
 
-			// Check file extension before proceeding
 			if !strings.HasSuffix(reader.URI().Name(), ".xlsx") {
 				dialog.ShowError(errors.New("invalid file format, please upload a xlsx file"), window)
 				return
@@ -478,12 +425,11 @@ func BulkUploadIncome(window fyne.Window, updateIncomeList func(), userID primit
 
 				go func() {
 					utils.BulkInsertIncome(incomes, window, progressBar)
-					updateIncomeList() // Refresh list after bulk upload
+					updateIncomeList()
 					fyne.Do(func() {
 						progressDialog.Hide()
 					})
 
-					// Update notifications
 					utils.AddNotification(models.Notification{
 						UserID:  userID,
 						Message: fmt.Sprintf("Bulk Upload: %d Incomes Uploaded", len(incomes)),
@@ -503,7 +449,7 @@ func ExportIncomeCSV(window fyne.Window) {
 	incomes := utils.GetAllIncomes(window)
 
 	if len(incomes) != 0 {
-		// Create progress dialog
+
 		progress := widget.NewProgressBar()
 		progressDialog := dialog.NewCustom("Exporting Incomes", "Cancel", progress, window)
 		progressDialog.Show()
@@ -519,10 +465,8 @@ func ExportIncomeCSV(window fyne.Window) {
 			writer := csv.NewWriter(file)
 			defer writer.Flush()
 
-			// Write header
 			writer.Write([]string{"Category", "Month", "Year", "Amount"})
 
-			// Write income data
 			for i, income := range incomes {
 				amount_string := strconv.Itoa(int(income.Amount))
 				writer.Write([]string{
@@ -532,11 +476,9 @@ func ExportIncomeCSV(window fyne.Window) {
 					amount_string,
 				})
 
-				// Update progress
 				progress.SetValue(float64(i+1) / float64(len(incomes)))
 			}
 
-			// Close progress dialog after exporting
 			progressDialog.Hide()
 			dialog.ShowInformation("Export Successful", "Incomes have been exported to incomes.csv", window)
 		}()
@@ -545,10 +487,8 @@ func ExportIncomeCSV(window fyne.Window) {
 	}
 }
 
-// Function to display the income form for adding or editing a income
-func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitive.ObjectID, onSubmit func()) {
+func showIncomeForm(window fyne.Window, existing *models.Income, UserID uint, onSubmit func()) {
 
-	// fetch user by ID
 	var user = utils.GetUserByID(UserID, window)
 
 	var income models.Income
@@ -556,16 +496,15 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 	if isEdit {
 		income = *existing
 	}
-	// get the income categories
-	income_categories := utils.GetAllDetails(window)
+
+	income_categories := utils.GetAllIncomeDetails(window)
 
 	var incomeCategories []string
 	for _, category := range income_categories {
-		// display available income categories
+
 		incomeCategories = append(incomeCategories, category.IncomeCategory)
 	}
 
-	// Initialize form fields
 	category := widget.NewSelect(incomeCategories, func(s string) {
 	})
 	category.SetSelected(income.Category)
@@ -579,7 +518,6 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 		month.SetSelected(income.Month)
 	}
 
-	// get current year
 	currentTime := time.Now()
 	currentYear := currentTime.Year()
 	string_current_year := strconv.Itoa(currentYear)
@@ -593,7 +531,6 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 	amount := widget.NewEntry()
 	amount.SetText(string_amount)
 
-	// Create form
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Category", Widget: category},
@@ -631,7 +568,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 					dialog.ShowError(err, window)
 					fmt.Printf("%s", err.Error())
 				} else {
-					// Create a new notification
+
 					userID := helpers.CurrentUserID
 					newNotification := models.Notification{
 						UserID:  userID,
@@ -640,18 +577,15 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 					}
 
 					utils.AddNotification(newNotification, window)
-					//utils.PlayNotificationSound(window)
 
 					detail := user.Username + " Edited Income: " + income.Category
 					utils.Logger(detail, "SUCCESS", window)
 
-					// Update the notification count
 					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Income updated successfully!", window)
 				}
 
 			} else {
-				income.ID = primitive.NewObjectID()
 				parsedTime, err := time.Parse("02-01-2006 15:04:05", time.Now().Format("02-01-2006 15:04:05"))
 
 				if err != nil {
@@ -667,7 +601,7 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 					dialog.ShowError(err, window)
 					fmt.Printf("%s", err.Error())
 				} else {
-					// Create a new notification
+
 					userID := helpers.CurrentUserID
 					newNotification := models.Notification{
 						UserID:  userID,
@@ -676,12 +610,10 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 					}
 
 					utils.AddNotification(newNotification, window)
-					//utils.PlayNotificationSound(window)
 
 					detail := user.Username + " Added Income: " + income.Category
 					utils.Logger(detail, "SUCCESS", window)
 
-					// Update the notification count
 					pages.UpdateNotificationCount(window)
 					dialog.ShowInformation("Success", "Income added", window)
 				}
@@ -695,16 +627,13 @@ func showIncomeForm(window fyne.Window, existing *models.Income, UserID primitiv
 		},
 	}
 
-	// Create a container for the form
 	formContainer := container.NewVBox(form)
 	centeredForm := helpers.NewFixedWidthCenter(formContainer, 400)
 	formSave := container.NewCenter(centeredForm)
 
-	// Show the form dialog
 	dialog.ShowCustom("Income Form", "Cancel", formSave, window)
 }
 
-// Function to parse xlsx and return incomes
 func parseIncomeXLSX(filePath string, window fyne.Window) ([]models.Income, error) {
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
@@ -737,17 +666,14 @@ func parseIncomeXLSX(filePath string, window fyne.Window) ([]models.Income, erro
 	incomes := make([]models.Income, 0, len(rows)-1)
 
 	for i, row := range rows {
-		// Skip header row.
 		if i == 0 {
 			continue
 		}
 
-		// Skip empty rows.
 		if len(row) == 0 {
 			continue
 		}
 
-		// Ensure the expected columns exist.
 		if len(row) < 4 {
 			continue
 		}
@@ -771,7 +697,6 @@ func parseIncomeXLSX(filePath string, window fyne.Window) ([]models.Income, erro
 		}
 
 		income := models.Income{
-			ID:       primitive.NewObjectID(),
 			Category: category,
 			Month:    month,
 			Year:     year,
@@ -784,7 +709,6 @@ func parseIncomeXLSX(filePath string, window fyne.Window) ([]models.Income, erro
 	return incomes, nil
 }
 
-// download income template
 func DownloadIncomeTemplate(parent fyne.Window, sourcePath string) {
 	info, err := os.Stat(sourcePath)
 	if err != nil {
@@ -829,7 +753,6 @@ func DownloadIncomeTemplate(parent fyne.Window, sourcePath string) {
 				return
 			}
 
-			// User cancelled.
 			if writer == nil {
 				return
 			}
@@ -838,7 +761,6 @@ func DownloadIncomeTemplate(parent fyne.Window, sourcePath string) {
 			defer func() {
 				writer.Close()
 
-				// Remove incomplete files if the copy failed.
 				if !success && writer.URI() != nil &&
 					writer.URI().Scheme() == "file" {
 
