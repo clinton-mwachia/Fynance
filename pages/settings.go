@@ -19,7 +19,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Struct to hold app settings
 type AppSettings struct {
 	IsDarkMode   bool   `json:"is_dark_mode"`
 	PageSize     string `json:"page_size"`
@@ -28,21 +27,18 @@ type AppSettings struct {
 
 const settingsFilePath = "settings.json"
 
-// LoadSettings loads the app settings from a JSON file
 func LoadSettings() (*AppSettings, error) {
-	// Check if the settings file exists
+
 	if _, err := os.Stat(settingsFilePath); os.IsNotExist(err) {
-		// If it doesn't exist, return default settings
+
 		return &AppSettings{IsDarkMode: false, PageSize: "10", IsBulkUpload: "No"}, nil
 	}
 
-	// Read the settings file
 	fileBytes, err := os.ReadFile(settingsFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	// Unmarshal the JSON data into the AppSettings struct
 	var settings AppSettings
 	err = json.Unmarshal(fileBytes, &settings)
 	if err != nil {
@@ -51,15 +47,13 @@ func LoadSettings() (*AppSettings, error) {
 	return &settings, nil
 }
 
-// SaveSettings saves the app settings to a JSON file
 func SaveSettings(settings *AppSettings) error {
-	// Marshal the settings struct into JSON format
+
 	fileBytes, err := json.Marshal(settings)
 	if err != nil {
 		return err
 	}
 
-	// Write the JSON data to the settings file
 	err = os.WriteFile(settingsFilePath, fileBytes, 0644)
 	if err != nil {
 		return err
@@ -68,10 +62,8 @@ func SaveSettings(settings *AppSettings) error {
 	return nil
 }
 
-// Variable to track current theme mode
 var isDarkMode bool = false
 
-// Function to apply the theme based on the current mode
 func applyTheme() {
 	if isDarkMode {
 		fyne.CurrentApp().Settings().SetTheme(&themeVariant{Theme: theme.DefaultTheme(), variant: theme.VariantDark})
@@ -82,9 +74,8 @@ func applyTheme() {
 	}
 }
 
-// Function to toggle between light and dark mode and save the settings
 func toggleTheme(window fyne.Window) {
-	// load settings
+
 	saved_settings, err := LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("Loading settings", "Error loading settings: "+err.Error(), window)
@@ -92,7 +83,6 @@ func toggleTheme(window fyne.Window) {
 	isDarkMode = !isDarkMode
 	applyTheme()
 
-	// Save the current theme setting
 	settings := &AppSettings{PageSize: saved_settings.PageSize, IsDarkMode: isDarkMode, IsBulkUpload: saved_settings.IsBulkUpload}
 	err = SaveSettings(settings)
 	if err != nil {
@@ -101,13 +91,12 @@ func toggleTheme(window fyne.Window) {
 }
 
 func toggleBulkUpload(value string, window fyne.Window) {
-	// load settings
+
 	saved_settings, err := LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("Loading settings", "Error loading settings: "+err.Error(), window)
 	}
 
-	// Save the current theme setting
 	settings := &AppSettings{PageSize: saved_settings.PageSize,
 		IsDarkMode: saved_settings.IsDarkMode, IsBulkUpload: value}
 	err = SaveSettings(settings)
@@ -116,14 +105,13 @@ func toggleBulkUpload(value string, window fyne.Window) {
 	}
 }
 
-// FUNCTION TO TOGGLE THE PAGE SIZE
 func updatePageSize(pageSize string, window fyne.Window) {
-	// load settings
+
 	saved_settings, err := LoadSettings()
 	if err != nil {
 		dialog.ShowInformation("Loading settings", "Error loading settings: "+err.Error(), window)
 	}
-	// Save the current theme setting
+
 	settings := &AppSettings{IsDarkMode: saved_settings.IsDarkMode, PageSize: pageSize, IsBulkUpload: saved_settings.IsBulkUpload}
 
 	err = SaveSettings(settings)
@@ -133,7 +121,6 @@ func updatePageSize(pageSize string, window fyne.Window) {
 
 }
 
-// showSettings displays the settings view with user details and update options
 func ShowSettings(window fyne.Window) {
 	var user models.User
 	var ImageFile *canvas.Image
@@ -144,7 +131,6 @@ func ShowSettings(window fyne.Window) {
 	}
 	loadUser()
 
-	// load settings
 	settings, err := LoadSettings()
 
 	if err != nil {
@@ -154,12 +140,11 @@ func ShowSettings(window fyne.Window) {
 	ImageFile = canvas.NewImageFromFile("assets/profile.jpg")
 
 	ImageFile.SetMinSize(fyne.NewSize(200, 200))
-	ImageFile.FillMode = canvas.ImageFillContain // Ensure proper scaling
-	// User details section (Right Side)
+	ImageFile.FillMode = canvas.ImageFillContain
+
 	userDetailsContainer := container.NewVBox()
 	userDetailsContainer.Resize(fyne.NewSize(300, 200))
 
-	// refresh user details in the UI
 	refreshUserDetails := func() {
 		loadUser()
 
@@ -172,14 +157,12 @@ func ShowSettings(window fyne.Window) {
 		userDetailsContainer.Refresh()
 	}
 
-	// selects
 	pageSizeSelect := widget.NewSelect([]string{"5", "10", "20", "30"}, func(value string) {
 		updatePageSize(value, window)
 	})
 
 	pageSizeSelect.SetSelected(settings.PageSize)
 
-	// bulk Upload
 	bulkUploadSelect := widget.NewRadioGroup([]string{"Yes", "No"}, func(s string) {
 		toggleBulkUpload(s, window)
 	})
@@ -213,7 +196,6 @@ func ShowSettings(window fyne.Window) {
 		),
 	)
 
-	// Center the content
 	centeredContent := container.NewCenter(content)
 	containerWithWidth := container.New(layout.NewStackLayout(), centeredContent)
 	containerWithWidth.Resize(fyne.NewSize(600, 500))
@@ -221,7 +203,6 @@ func ShowSettings(window fyne.Window) {
 	dialog.ShowCustom("Settings", "Close", content, window)
 }
 
-// showUpdateUserDetailsDialog displays a dialog for updating user details
 func ShowUpdateUserDetailsDialog(window fyne.Window, user models.User, updateUserDetailsInView func()) {
 	phoneEntry := widget.NewEntry()
 	phoneEntry.SetPlaceHolder("Enter Phone")
@@ -240,10 +221,8 @@ func ShowUpdateUserDetailsDialog(window fyne.Window, user models.User, updateUse
 
 		user.Phone = phoneEntry.Text
 
-		// Update user details in the database
 		utils.UpdateUser(user, window)
 
-		// Update user details in the view
 		updateUserDetailsInView()
 
 		dialog.ShowInformation("Success", "User details updated successfully.", window)
@@ -251,7 +230,6 @@ func ShowUpdateUserDetailsDialog(window fyne.Window, user models.User, updateUse
 	}, window)
 }
 
-// showChangePasswordDialog displays a dialog for changing the user's password
 func ShowChangePasswordDialog(window fyne.Window, user models.User) {
 	currentPasswordEntry := widget.NewPasswordEntry()
 	currentPasswordEntry.SetPlaceHolder("Enter Current Password")
@@ -279,13 +257,11 @@ func ShowChangePasswordDialog(window fyne.Window, user models.User) {
 		newPassword := newPasswordEntry.Text
 		confirmPassword := confirmPasswordEntry.Text
 
-		// Verify that old password matches the stored password hash.
 		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
 			dialog.ShowError(errors.New("old password is incorrect"), window)
 			return
 		}
 
-		// Check if the new password is the same as the old password.
 		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(newPassword)); err == nil {
 			dialog.ShowError(errors.New("new password cannot be the same as the old password"), window)
 			return
@@ -296,8 +272,7 @@ func ShowChangePasswordDialog(window fyne.Window, user models.User) {
 			return
 		}
 
-		// Update password in the database
-		err := auth.UpdateUserPassword(user.ID, newPassword, window)
+		err := auth.ResetPassword(user.ID, newPassword, window)
 		if err != nil {
 			dialog.ShowError(err, window)
 			return

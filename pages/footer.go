@@ -11,11 +11,9 @@ import (
 
 func Footer(window fyne.Window) *fyne.Container {
 
-	// get current year
 	currentTime := time.Now()
 	currentYear := currentTime.Year()
 
-	// Footer container
 	footer := container.NewCenter(
 		widget.NewLabel(fmt.Sprintf("© %d Moshe Crafts. All Rights Reserved.", currentYear)),
 	)

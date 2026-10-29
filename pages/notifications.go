@@ -11,9 +11,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// notifications
 func ShowNotifications(window fyne.Window) {
-	// Fetch notifications from the database
+
 	userID := helpers.CurrentUserID
 	notifications = utils.FetchNotifications(userID, window)
 
@@ -22,7 +21,6 @@ func ShowNotifications(window fyne.Window) {
 		return
 	}
 
-	// Create a list to display notifications
 	list := widget.NewList(
 		func() int { return len(notifications) },
 		func() fyne.CanvasObject {
@@ -33,7 +31,6 @@ func ShowNotifications(window fyne.Window) {
 		},
 	)
 
-	// Create buttons for clearing and marking notifications
 	markAsReadButton := widget.NewButton("Mark All as Read", func() {
 		utils.MarkNotificationsAsRead(userID, window)
 		UpdateNotificationCount(window)
@@ -46,21 +43,18 @@ func ShowNotifications(window fyne.Window) {
 		UpdateNotificationCount(window)
 		notificationIcon.Refresh()
 		notifications = utils.FetchNotifications(userID, window)
-		list.Refresh() // Refresh the list widget to update UI
+		list.Refresh()
 		dialog.ShowInformation("Notifications", "All notifications cleared.", window)
 	})
 
-	// Create a scrollable container for the list
 	scrollableList := container.NewVScroll(list)
 	scrollableList.SetMinSize(fyne.NewSize(400, 250))
 
-	// Create a container for the list and buttons
 	content := container.NewVBox(
 		scrollableList,
 		container.NewHBox(markAsReadButton, clearButton),
 	)
 
-	// Show notifications in a new window or dialog
 	dialog.ShowCustom("Notifications", "Close", content, window)
 }
 

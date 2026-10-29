@@ -23,13 +23,11 @@ var (
 
 var statusLabel *widget.Label
 
-// Check if app is online
 func isOnline() bool {
-	_, err := http.Get("https://www.google.com")
+	_, err := http.Get("https//google.com")
 	return err == nil
 }
 
-// Function to display the status label and hide it after 5 seconds
 func showStatus(status string, window fyne.Window) {
 	fyne.Do(func() {
 		statusLabel.SetText(status)
@@ -44,7 +42,6 @@ func showStatus(status string, window fyne.Window) {
 	}()
 }
 
-// Function to monitor network status
 func monitorNetworkStatus(window fyne.Window) {
 	for {
 		if isOnline() {
@@ -52,23 +49,21 @@ func monitorNetworkStatus(window fyne.Window) {
 		} else {
 			showStatus("Offline", window)
 		}
-		time.Sleep(5 * time.Second) // Check every 5 seconds
+		time.Sleep(5 * time.Second)
 	}
 }
 
 func Header(window fyne.Window, title string) *fyne.Container {
 	statusLabel = widget.NewLabel("")
-	statusLabel.Hide() // Initially hidden
+	statusLabel.Hide()
 
-	go monitorNetworkStatus(window) // Start monitoring network status
+	go monitorNetworkStatus(window)
 
-	// Notification icon button with initial count
 	notificationCountLabel = widget.NewLabel("0")
 	notificationIcon = widget.NewButtonWithIcon("", theme.MailComposeIcon(), func() {
 		ShowNotifications(window)
 	})
 
-	// settings icon
 	settingsIcon = widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
 		ShowSettings(window)
 	})
@@ -79,18 +74,16 @@ func Header(window fyne.Window, title string) *fyne.Container {
 		themeIcon = theme.VisibilityIcon()
 	}
 
-	// dark mode icon
 	darkModeIcon = widget.NewButtonWithIcon("", themeIcon, func() {
 		toggleTheme(window)
 	})
 
-	// Real-time local time label
 	timeLabel = widget.NewLabel(time.Now().Format("15:04:05 PM"))
 	go func() {
 		for {
 			time.Sleep(time.Second)
 			current := time.Now().Format("15:04:05 PM")
-			// Only update if value changes
+
 			if timeLabel.Text != current {
 				fyne.Do(func() {
 					timeLabel.SetText(current)
@@ -100,10 +93,8 @@ func Header(window fyne.Window, title string) *fyne.Container {
 		}
 	}()
 
-	// Set initial count
 	UpdateNotificationCount(window)
 
-	// Header container
 	header := container.NewHBox(
 		widget.NewLabel(title),
 		statusLabel,
