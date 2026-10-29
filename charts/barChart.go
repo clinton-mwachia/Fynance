@@ -24,7 +24,7 @@ type BarChart struct {
 }
 
 func NewBarChart(maxHeight, barWidth, spacing float32) *BarChart {
-	// Create main container with border
+
 	mainBorder := canvas.NewRectangle(color.Gray{0x99})
 	mainBorder.StrokeWidth = 2
 	mainBorder.StrokeColor = color.Gray{0x99}
@@ -44,7 +44,7 @@ func NewBarChart(maxHeight, barWidth, spacing float32) *BarChart {
 }
 
 func (b *BarChart) UpdateData(data map[string]DataPoint) {
-	// Get the inner HBox container
+
 	innerContainer := b.container.Objects[1].(*fyne.Container).Objects[0].(*fyne.Container)
 	innerContainer.Objects = nil
 
