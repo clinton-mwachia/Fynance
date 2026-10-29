@@ -2,15 +2,11 @@ package models
 
 import (
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type IncomeDetail struct {
-	ID             primitive.ObjectID `bson:"_id,omitempty"`
-	IncomeCategory string             `bson:"income_category"`
-	CreatedAt      time.Time          `bson:"created_at"`
-	UpdatedAt      time.Time          `bson:"updated_at"`
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	IncomeCategory string    `gorm:"type:varchar(255);not null" json:"income_category"`
+	CreatedAt      time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
-
-// time.Now().Format("2006-01-02 15:04:05")

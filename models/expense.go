@@ -2,18 +2,14 @@ package models
 
 import (
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Expense struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	Category  string             `bson:"category"`
-	Month     string             `bson:"month"`
-	Year      string             `bson:"year"`
-	Amount    float64            `bson:"amount"`
-	CreatedAt time.Time          `bson:"created_at"`
-	UpdatedAt time.Time          `bson:"updated_at"`
+	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Category  string    `gorm:"type:varchar(255);not null" json:"category"`
+	Month     string    `gorm:"type:varchar(255);not null" json:"month"`
+	Year      string    `gorm:"type:varchar(255);not null" json:"year"`
+	Amount    float64   `gorm:"type:bigint;not null" json:"amount"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
-
-// time.Now().Format("2006-01-02 15:04:05")

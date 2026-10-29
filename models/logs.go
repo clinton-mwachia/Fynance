@@ -2,13 +2,11 @@ package models
 
 import (
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Log struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	Status    string             `bson:"status"`
-	Details   string             `bson:"details,omitempty"`
-	Timestamp time.Time          `bson:"timestamp"`
+	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Status    string    `gorm:"type:varchar(100);not null" json:"status"`
+	Details   string    `gorm:"type:varchar(200);not null" json:"details"`
+	Timestamp time.Time `gorm:"autoCreateTime" json:"timestamp"`
 }

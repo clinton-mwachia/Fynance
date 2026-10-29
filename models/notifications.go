@@ -1,12 +1,12 @@
 package models
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import "time"
 
-// Notification struct for storing notification data
 type Notification struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	UserID    primitive.ObjectID `bson:"user_id"`
-	Message   string             `bson:"message"`
-	IsRead    bool               `bson:"is_read"`
-	CreatedAt primitive.DateTime `bson:"created_at"`
+	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID    uint      `gorm:"index" json:"user_id"`
+	Message   string    `gorm:"type:varchar(100);not null" json:"message"`
+	IsRead    bool      `gorm:"default:false" json:"is_read"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
