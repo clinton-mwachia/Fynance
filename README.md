@@ -30,15 +30,14 @@ Fynance is a desktop application designed to help individuals and businesses tra
 - Processor: 1 GHz or higher
 - RAM: 1 GB or more
 - Disk Space: 50 MB or more available space
-- Database: MongoDB
+- Database: SQLite
 
 ## Installation Instructions
 
-1. Download MongoDB and install.
-2. Download [Fynance](https://github.com/clinton-mwachia/Fynance/releases).
-3. Run the installer and follow the on-screen instructions.
-4. Choose the location where you want the application to be installed.
-5. Once installed, launch Fynance from the Start Menu or desktop shortcut.
+1. Download [Fynance](https://github.com/clinton-mwachia/Fynance/releases).
+2. Run the installer and follow the on-screen instructions.
+3. Choose the location where you want the application to be installed.
+4. Once installed, launch Fynance from the Start Menu or desktop shortcut.
 
 ## How to Use
 
