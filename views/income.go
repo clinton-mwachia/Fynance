@@ -90,7 +90,7 @@ func IncomeView(window fyne.Window) *fyne.Container {
 				totalIncomes = int64(len(incomes))
 			} else {
 				incomes = utils.GetIncomesPaginated(page, pageSize, window, func(progressValue float64) {
-					progress.SetValue(progressValue)
+					fyne.Do(func() {})
 				})
 				totalIncomes = utils.CountIncomes(window)
 			}
@@ -101,6 +101,9 @@ func IncomeView(window fyne.Window) *fyne.Container {
 				incomeList.Refresh()
 
 				totalPages := int(math.Ceil(float64(totalIncomes) / float64(pageSize)))
+				if totalPages == 0 {
+					totalPages = 1
+				}
 
 				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
@@ -325,7 +328,12 @@ func IncomeView(window fyne.Window) *fyne.Container {
 		}
 	})
 
-	pageLabel = widget.NewLabel(fmt.Sprintf("Page %d of %d", currentPage, int(math.Ceil(float64(totalIncomes)/float64(pageSize)))))
+	totalPages := int(math.Ceil(float64(totalIncomes) / float64(pageSize)))
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	pageLabel = widget.NewLabel(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
 	pagination.Add(prevButton)
 	pagination.Add(pageLabel)
@@ -384,8 +392,8 @@ func IncomeView(window fyne.Window) *fyne.Container {
 			addIncomeButton, bulkUploadIncomeButton, exportToCSV, downloadIncomeTemplateBtn)
 	} else {
 		exportButtonContainer = container.New(layout.NewGridLayout(5),
-			selectAllButton, deselectAllButton, deleteSelectedIncomesButton,
-			addIncomeButton, exportToCSV)
+			addIncomeButton, selectAllButton, deselectAllButton, deleteSelectedIncomesButton,
+			exportToCSV)
 	}
 
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, incomeList, noResultsLabel)

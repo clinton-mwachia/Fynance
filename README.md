@@ -4,11 +4,11 @@
 
 https://github.com/user-attachments/assets/4ad96707-7a43-46ff-86a0-5bd779025e39
 
-> Version: 2.0.0
+> Version: 2.0.1
 >
 > Developed by: Clinton Moshe
 >
-> Updated On: 29/10/2026
+> Updated On: 19/11/2026
 
 ## Introduction
 

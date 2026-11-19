@@ -79,7 +79,6 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 	}
 
 	loadExpenses := func(page int) {
-
 		progress := widget.NewProgressBar()
 		progress.SetValue(0)
 		progressDialog := dialog.NewCustom("Loading Expenses", "Cancel", progress, window)
@@ -93,7 +92,9 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 			} else {
 
 				expenses = utils.GetExpensesPaginated(page, pageSize, window, func(progressValue float64) {
-					progress.SetValue(progressValue)
+					fyne.Do(func() {
+						progress.SetValue(progressValue)
+					})
 				})
 				totalExpenses = utils.CountExpenses(window)
 			}
@@ -104,6 +105,9 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 				expenseList.Refresh()
 
 				totalPages := int(math.Ceil(float64(totalExpenses) / float64(pageSize)))
+				if totalPages == 0 {
+					totalPages = 1
+				}
 
 				pageLabel.SetText(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
@@ -331,7 +335,12 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 		}
 	})
 
-	pageLabel = widget.NewLabel(fmt.Sprintf("Page %d of %d", currentPage, int(math.Ceil(float64(totalExpenses)/float64(pageSize)))))
+	totalPages := int(math.Ceil(float64(totalExpenses) / float64(pageSize)))
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	pageLabel = widget.NewLabel(fmt.Sprintf("Page %d of %d", currentPage, totalPages))
 
 	pagination.Add(prevButton)
 	pagination.Add(pageLabel)
@@ -428,8 +437,8 @@ func ExpenseView(window fyne.Window) *fyne.Container {
 			addExpenseButton, bulkUploadExpensesButton, exportToCSV, downloadExpensesTemplateBtn)
 	} else {
 		exportButtonContainer = container.New(layout.NewGridLayout(5),
-			selectAllButton, deselectAllButton, deleteSelectedExpensesButton,
-			addExpenseButton, exportToCSV)
+			addExpenseButton, selectAllButton, deselectAllButton, deleteSelectedExpensesButton,
+			exportToCSV)
 	}
 
 	listContainer := container.NewBorder(titleRow, nil, nil, nil, expenseList, noResultsLabel)
